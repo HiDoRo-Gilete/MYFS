@@ -29,7 +29,7 @@ class MYFS:
         if sysFile!=None and myfsFile !=None:
             self.getInfo()
 
-    def createMYFS(self,label):
+    def createMYFS(self,label,password):
         self.clustor_size = config.CLUSTOR_SIZE
         self.max_file_size = config.MAX_FILE_SIZE
         self.max_file=config.MAX_FILE
@@ -40,7 +40,7 @@ class MYFS:
         self.sdet_size,self.sdet_index = config.SDET_SIZE,config.SDET_INDEX
         self.clustor_start = config.CLUSTOR_START
 
-        systemRegion = self.createSystemRegion(label)  # system region has 1024bit
+        systemRegion = self.createSystemRegion(label,password)  # system region has 1024bit
         bitmapRegion =b'\x00' * self.bitmap_size
         sdetRegion = b'\x00'*self.sdet_size
         backupRegion = b'\x00'*self.backup_size
@@ -52,9 +52,9 @@ class MYFS:
         self.myfsFile=open(label+'_MYFS.dat','w+b')
         self.myfsFile.write(label_myfs)
 
-    def createSystemRegion(self,label):
+    def createSystemRegion(self,label,password):
         systemData = label.encode()
-        
+
 
     def getInfo(self):
         pass
