@@ -1,0 +1,10 @@
+# test
+test.py
+playground.py
+
+# 
+MYFS/*
+!MYFS/.gitkeep 
+
+# caches
+__pycache__
