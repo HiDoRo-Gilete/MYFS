@@ -44,6 +44,12 @@ def aesEncrypt(key: bytes, plain_text: bytes):
     return cipher_text, nonce
 
 def aesDecrypt(key: bytes, nonce: bytes, cipher_text: bytes):
-    decrypt_cipher = AES.new(key, AES.MODE_CTR, nonce=nonce)
-    plain_text = decrypt_cipher.decrypt(cipher_text)
-    return plain_text
+    try:
+        decrypt_cipher = AES.new(key, AES.MODE_CTR, nonce=nonce)
+        plain_text = decrypt_cipher.decrypt(cipher_text)
+        return plain_text
+    except Exception as e: print(e)
+
+def overwrite(fileobj, start,newbytes):
+    fileobj.seek(start)
+    fileobj.write(newbytes)    

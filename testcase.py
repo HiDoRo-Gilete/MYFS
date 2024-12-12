@@ -9,12 +9,12 @@ def testSmartOTP():
 #1. testcase createMYFS 
 def testCreateMYFS():
     myfs = MYFS.MYFS()
-    myfs.createMYFS('H','helloword') #result: 2 file H_SYS.dat and H_MYFS.dat is create
+    myfs.createMYFS('H','helloworld') #result: 2 file H_SYS.dat and H_MYFS.dat is create
 
 #2. testcase declare MYFS
 def testDeclareMYFS():
     myfs= MYFS.MYFS()
-    myfs.createMYFS('H','helloword')
+    myfs.createMYFS('H','helloworld')
     filesys = open('./MYFS/H_SYS.dat','r+b')
     filemyfs = open('./MYFS/H_MYFS.dat','r+b')
     myfs = None
