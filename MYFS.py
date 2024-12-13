@@ -84,49 +84,60 @@ class MYFS:
         dataOffset = self.cluster_start.to_bytes(4, "big", signed=False) # 4 bytes
         systemData += clusterSize + entrySize + bitMapSize + sdetSize + backupSize + bitMapOffset + sdetOffset + backupOffset + dataOffset
         # print(len(systemData)) # 48 + 36 = 84
+        
+        # Add sys manager (not encrypted by default)
+        isSysEncrypted = b'\x00' # 1 byte
+        sysEncryptedNonce = b'\x00' * 8 # 8 bytes
+        sysPwdHash = b'\x00' * 32 # 32 bytes
+        sysDataHash = sha256(systemData) # 32 bytes  
+        sysEndingMarker = "MYFS".encode(encoding="ascii") # 4 bytes
+        manager = isSysEncrypted + sysEncryptedNonce + sysPwdHash + sysDataHash + sysEndingMarker
+        # print(len(systemManager)) # 77
+        self.sys_password = None
+        systemData += manager
+        
         endingMarker = "MYFS".encode(encoding="ascii") # 4 bytes
         reserved = b'\x00' * (self.sys_size - len(systemData) - len(endingMarker))
         systemData += reserved + endingMarker
         # print(len(systemData)) # 1024
-        
-        # Add sys manager (not encrypted by default)
-        isEncrypted = b'\x00' # 1 byte
-        sysEncryptedNonce = b'\x00' * 8 # 8 bytes
-        sysPwdHash = b'\x00' * 32 # 32 bytes
-        sysDataHash = sha256(systemData) # 32 bytes  
-        systemManager = isEncrypted + sysEncryptedNonce + sysPwdHash + sysDataHash + endingMarker # +4 bytes
-        # print(len(systemManager)) # 77
-        self.sys_password = None
-        
-        systemData = systemManager + systemData # 77+1024= 1097 bytes
         return systemData
     
     def getSYSData(self, file: BufferedRandom) -> bool:
         file.seek(0)
         systemData = file.read()
-        if len(systemData) != 77+1024:
+        if len(systemData) != 1024:
             print(len(systemData), "Invalid sys file")
             return False
         
-        systemManager = systemData[:77]
-        systemData = systemData[77:]
+        metadata = systemData[:84]
+        manager = systemData[84:84+77]
+        endingMarker = (systemData[-4:]).decode("ascii")
         
-        isSysEncrypted = True if systemManager[:1] == b'\x01' else False
-        sysEncryptedNonce = systemManager[1:9]
-        sysPwdHash = systemManager[9: 41]
-        sysDataHash = systemManager[41: 73]
-        endingMarker = (systemManager[73: 77]).decode("ascii")
-        if (endingMarker != "MYFS"):
-            print(endingMarker, "Invalid sys file")
+        isSysEncrypted = True if manager[:1] == b'\x01' else False
+        sysEncryptedNonce = manager[1:9]
+        sysPwdHash = manager[9: 41]
+        sysDataHash = manager[41: 73]
+        sysEndingMarker = (manager[73: 77]).decode("ascii")
+        # Check manager's ending marker
+        if (sysEndingMarker != "MYFS"):
+            print(sysEndingMarker, "Invalid sys file")
             return False
-        
-        # Check system's data integrity
-        if (sysDataHash != sha256(systemData)):
-            print("Sys Data is corrupted")
-            return False
-        
         self.sys_password = sysPwdHash if isSysEncrypted == True else None 
+
+        try:
+            print(endingMarker)
+            if (endingMarker != "MYFS"):
+                print(endingMarker, "Invalid sys file")
+                return False
+        except Exception as e: 
+            print(e)
+            
         print()
+        # Check system's data integrity
+        if (sysDataHash != sha256(metadata)):
+            print("SYS data is corrupted")
+            return False
+        
         # Decrypt system's data
         while (isSysEncrypted):
             try:
@@ -134,54 +145,42 @@ class MYFS:
                 if (sysPwd.lower() == 'e'):
                     return False
                 if sha256(sysPwd.encode(encoding="utf-8")) == sysPwdHash:
-                    systemData = aesDecrypt(hkdf(sysPwd), sysEncryptedNonce, systemData)
+                    metadata = aesDecrypt(hkdf(sysPwd), sysEncryptedNonce, metadata)
                     break
                 else:
                     print("Wrong password!")
             except Exception as e: print(e)
             
-        # print(":)")
-        try:
-            print(systemData[-4:])
-            sysEndingMarker = (systemData[-4:]).decode("ascii")   
-            if (sysEndingMarker != "MYFS"):
-                print(sysEndingMarker, "Invalid sys file")
-                return False
-        except Exception as e: 
-            print(e)
         
-        volumeLabel = (systemData[:1]).decode("ascii")
-        volumeID = (systemData[1:9]).decode("ascii")
-        machineID = hex(int.from_bytes(systemData[9:15], "big", signed=False))[2:]
-        accessControlEnable = True if (systemData[15:16] == b'\x01') else False
-        accessPwdHash = systemData[16:48]
-        # print(":)")
+        volumeLabel = (metadata[:1]).decode("ascii")
+        volumeID = (metadata[1:9]).decode("ascii")
+        machineID = hex(int.from_bytes(metadata[9:15], "big", signed=False))[2:]
+        accessControlEnable = True if (metadata[15:16] == b'\x01') else False
+        accessPwdHash = metadata[16:48]
+        self.access_password = accessPwdHash if accessControlEnable == True else None
+        # Check machine's origin
         if (machineID != getMAC()):
             print("Can not read volume from this machine")
             return False
         
-        self.access_password = accessPwdHash if accessControlEnable == True else None
-        print()
         while (accessControlEnable):
             accessPwd = input('Volume is protected! Enter password or e/E to exit: ')
             if (accessPwd.lower() == 'e'):
                 return False
             if sha256(accessPwd.encode(encoding="utf-8")) == accessPwdHash:
-                print()
                 break
             else:
                 print("Wrong password!")
         
-        clusterSize = int.from_bytes(systemData[48:52], "big", signed=False)
-        entrySize = int.from_bytes(systemData[52:56], "big", signed=False)
-        bitMapSize = int.from_bytes(systemData[56:60], "big", signed=False)
-        sdetSize = int.from_bytes(systemData[60:64], "big", signed=False)
-        backupSize = int.from_bytes(systemData[64:68], "big", signed=False)
-        bitMapOffset = int.from_bytes(systemData[68:72], "big", signed=False)
-        sdetOffset = int.from_bytes(systemData[72:76], "big", signed=False)
-        backupOffset = int.from_bytes(systemData[76:80], "big", signed=False)
-        dataOffset = int.from_bytes(systemData[80:84], "big", signed=False)
-        # reserved = systemData[84:-4]
+        clusterSize = int.from_bytes(metadata[48:52], "big", signed=False)
+        entrySize = int.from_bytes(metadata[52:56], "big", signed=False)
+        bitMapSize = int.from_bytes(metadata[56:60], "big", signed=False)
+        sdetSize = int.from_bytes(metadata[60:64], "big", signed=False)
+        backupSize = int.from_bytes(metadata[64:68], "big", signed=False)
+        bitMapOffset = int.from_bytes(metadata[68:72], "big", signed=False)
+        sdetOffset = int.from_bytes(metadata[72:76], "big", signed=False)
+        backupOffset = int.from_bytes(metadata[76:80], "big", signed=False)
+        dataOffset = int.from_bytes(metadata[80:84], "big", signed=False)
 
         self.label = volumeLabel
         self.id = volumeID
@@ -205,15 +204,18 @@ class MYFS:
     
     def info(self):
             print('------------VOLUME------------')
-            print("Label: ", self.label)
-            print("ID: ", self.id)
-            print("Machine ID: ", self.machine_id)
+            print("Label:", self.label)
+            print("ID:", self.id)
+            print("Machine ID:", self.machine_id)
+            print("Protection:", "None" if self.access_password == None else "Password")
+            print("SYS encryption:", "False" if self.sys_password == None else "Yes")
+            print()
             
-            print("Cluster size: ", strSize(self.cluster_size, "KB"))
-            print("Entry size: ", strSize(self.entry_size, "KB"))
-            print("Bitmap size: ", strSize(self.bitmap_size, "KB"))
-            print("Sdet Size: ", strSize(self.sdet_size, "KB"))
-            print("First cluster's offset: ", strSize(self.cluster_start, "KB"))
+            print("Cluster size:", strSize(self.cluster_size, "KB"))
+            print("Entry size:", strSize(self.entry_size, "KB"))
+            print("Bitmap size:", strSize(self.bitmap_size, "KB"))
+            print("Sdet Size:", strSize(self.sdet_size, "KB"))
+            print("First cluster's offset:", strSize(self.cluster_start, "KB"))
             print()
 
     def getInfo(self) -> bool:
@@ -222,7 +224,7 @@ class MYFS:
     def getFSData(self, file: BufferedRandom) -> bool:
         return True
     
-    def updateAccessPassword(self):
+    def updateFSPassword(self):
         print("-------Update volume password-------")
         if (self.access_password != None):
             while True:
@@ -247,26 +249,31 @@ class MYFS:
             if (confirm.lower() == 'b'):
                 return None
         
+        
         self.access_password = sha256(password.encode(encoding="utf-8"))
-        overwrite(self.sysFile, 77+15, b'\x01')
-        overwrite(self.sysFile, 77+16, self.access_password)
+        overwrite(self.sysFile, 15, b'\x01')
+        overwrite(self.sysFile, 16, self.access_password)
+        
         self.sysFile.seek(0)
-        systemData = self.sysFile.read()[77: 77 + 1024]
-        dataHash = sha256(systemData)
-        overwrite(self.sysFile, 41, dataHash)
+        systemData = self.sysFile.read()
+        metadata = systemData[:84]
+        
+        # update manager # sysDataHash
+        overwrite(self.sysFile, 84+41, sha256(metadata))
         self.sysFile.flush()
-        # self.sysFile=open('./MYFS/' + self.label +'_SYS.dat','w+b')
-        print("Successfully updated!")        
+        print("Successfully updated!")   
+        input()     
         pass
     
     def updateSysPassword(self):
         print("-------Update password for sys file-------")
+        old_password = ""
         if (self.sys_password != None):
             while True:
-                password = input("Enter current password or b/B to back: ")
-                if (password.lower() == 'b'):
+                old_password = input("Enter current password or b/B to back: ")
+                if (old_password.lower() == 'b'):
                     return None
-                if (sha256(password.encode(encoding="utf-8")) == self.sys_password):
+                if (sha256(old_password.encode(encoding="utf-8")) == self.sys_password):
                     break
                 else:
                     print("Wrong password!")
@@ -283,18 +290,43 @@ class MYFS:
             if (confirm.lower() == 'b'):
                 return None
             
-        self.sys_password = sha256(password.encode(encoding="utf-8"))
-
-        self.sysFile.seek(0)
-        systemData = self.sysFile.read()[77: 77 + 1024]
-        cipher_text, nonce = aesEncrypt(hkdf(password), systemData)
-        dataHash = sha256(cipher_text)
-        overwrite(self.sysFile, 0, b'\x01')
-        overwrite(self.sysFile, 1, nonce)
-        overwrite(self.sysFile, 9, self.sys_password)
-        overwrite(self.sysFile, 41, dataHash)
-        overwrite(self.sysFile, 77, cipher_text)
-        self.sysFile.flush()
-        # self.sysFile=open('./MYFS/' + self.label +'_SYS.dat','w+b')
-        print("Successfully updated!")    
+        try:
+            self.sys_password = sha256(password.encode(encoding="utf-8"))
+            self.sysFile.seek(0)
+            systemData = self.sysFile.read()
+            # decrypt to get plain metadata
+            metadata = self.decryptSysData(systemData, old_password)
+            
+            # create new manager
+            isSysEncrypted = b'\x01' # 1 byte
+            # re-encrypt metadata
+            sysEncryptedData, sysEncryptedNonce = aesEncrypt(hkdf(password), metadata)
+            sysPwdHash = self.sys_password # 32 bytes
+            sysDataHash = sha256(sysEncryptedData)
+            sysEndingMarker = "MYFS".encode(encoding="ascii") # 4 bytes
+            manager = isSysEncrypted + sysEncryptedNonce + sysPwdHash + sysDataHash + sysEndingMarker # +4 bytes
+            overwrite(self.sysFile, 84+0, manager)
+            overwrite(self.sysFile, 0, sysEncryptedData)
+            self.sysFile.flush()
+            print("Successfully updated!")   
+            input() 
+        except Exception as e: print(e)
         pass
+    
+    def decryptSysData(self, systemData: bytes, sysPwd: str):
+        metadata = systemData[:84]
+        manager = systemData[84: 84+77]
+        isSysEncrypted = True if manager[:1] == b'\x01' else False
+        if isSysEncrypted == False:
+            return metadata
+        
+        sysEncryptedNonce = manager[1:9]
+        sysPwdHash = manager[9: 41]
+        sysDataHash = manager[41: 73]
+        if sha256(metadata) != sysDataHash:
+            print("SYS data is corrupted")
+            return None
+        if (sha256(sysPwd.encode()) != sysPwdHash):
+            print("Wrong password!")
+            return None
+        return aesDecrypt(hkdf(sysPwd), sysEncryptedNonce, metadata)

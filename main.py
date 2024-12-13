@@ -2,75 +2,82 @@ import MYFS
 import os
 
 def createMyFS():
-    x = input('Create a new MYFS (y/N): ')
-    while x.lower() !='y' and x.lower() !='n':
-        x = input('Input error, create MYFS (y/N):')
-    if x == 'y':
-        label = ""
-        while (len(label) != 1 or label < 'A' or label > 'Z' ):
-            label = input("Enter volume's label (A-Z): ").upper()
-            
-        password = ""
-        while (len(password) < 6):
-            password = input("Enter volume's protection password (>=6): ")
-        myfs = MYFS.MYFS()
-        myfs.createMYFS(label, password)
-        return myfs
-    return None
+    x = None
+    x = input("Create a new MYFS ('enter' to continue)")
+    if (x != ''):
+        return None
+    
+    label = ""
+    while (len(label) != 1 or label < 'A' or label > 'Z' ):
+        label = input("Enter volume's label (A-Z): ").upper()
+        
+    password = ""
+    while (password != None and len(password) < 6):
+        password = input("Enter volume's protection password (>=6) or 'enter' to skip: ")
+        if (password == ""):
+            password = None
+    myfs = MYFS.MYFS()
+    myfs.createMYFS(label, password)
+    return myfs
 
 def selectMYFS():
-    allfile = os.listdir('./MYFS')
-    labels = []
-    for file in allfile:
-        if '_MYFS.dat' in file:
-            label = file[0:1].upper()
-            if labels.count(label) == 0:
-                if (label + '_SYS.dat') in allfile:
-                    labels.append(label)
-    
-    if len(labels) == 0:
-        myfs = createMyFS()
-    else:
-        print('List of volumes detected:')
+    myfs = None
+    while myfs == None:
+        allfile = os.listdir('./MYFS')
+        labels = []
+        for file in allfile:
+            if '_MYFS.dat' in file:
+                label = file[0:1].upper()
+                if labels.count(label) == 0:
+                    if (label + '_SYS.dat') in allfile:
+                        labels.append(label)
+                    
+
+        print("----------------------")
+        print('List of volumes:')
         for i, label in enumerate(labels):
             print(str(i) + ".", label)
         print(str(len(labels)) + ".", "Create new volume")
-        print(str(len(labels) + 1) + ".", "Exit")  
+        print("e.", "Exit")  
+        
         label = None
         while (label == None):
             option = input(">> ")
-            
+            if (option.lower() == 'e'):
+                myfs = None
+                return None
             try:
                 option = int(option)
                 if (option == len(labels)):
                     myfs = createMyFS()
-                    return myfs
+                    break
                 elif (option == len(labels) + 1):
-                    return None
+                    myfs = None
+                    break
                 elif (option >=0 and option < len(labels)):
                     label = labels[option]
                 else:
                     print('No such volume!')
-                    label = None
             except:
                 pass                
-        try:
-            label = label.upper()
-            myfsFile = open('./MYFS/' + label + '_MYFS.dat', 'r+b')
-            sysFile = open('./MYFS/' + label + '_SYS.dat', 'r+b')
-            myfs = MYFS.MYFS(myfsFile, sysFile)
-            if not myfs.read_result == True:
+        if label != None:
+            try:
+                label = label.upper()
+                myfsFile = open('./MYFS/' + label + '_MYFS.dat', 'r+b')
+                sysFile = open('./MYFS/' + label + '_SYS.dat', 'r+b')
+                myfs = MYFS.MYFS(myfsFile, sysFile)
+                if not myfs.read_result == True:
+                    myfs = None
+            except:
+                print('Failed to read volume')
                 myfs = None
-        except:
-            print('Failed to read volume')
-            myfs = None
+                
     return myfs
         
 def menu(myfs: MYFS.MYFS):
-    myfs.info()
-
     action = -1
     while True:
+        myfs.info()
         print('------------------MENU---------------------')
         print("0. List")
         print("1. Import")
@@ -80,8 +87,13 @@ def menu(myfs: MYFS.MYFS):
         print("5. Encrypt file")
         print("6. Update volume's password")
         print("7. Encrypt volume's sys file")
-        print("8. Exit")
+        print("b. Back")
+        print("e. Exit")
         action = input(">> ")
+        if (action.lower() == 'b'):
+            return 0
+        elif (action.lower() == 'e'):
+            return -1
         try:
             action = int(action)
             if (action < 0 and action > 8):
@@ -105,21 +117,23 @@ def menu(myfs: MYFS.MYFS):
                 print('Developing...')
                 pass
             elif action == 6:
-                myfs.updateAccessPassword()
+                myfs.updateFSPassword()
                 pass
             elif action == 7:
                 myfs.updateSysPassword()
                 pass
             elif action == 8:
-                return None
+                return 0
+            elif action == 9:
+                return -1
         except:
             pass
         
 def main():
     myfs = None
-    myfs = selectMYFS()
-    if myfs == None:
-        return
-    menu(myfs)
+    while True:
+        myfs = selectMYFS()
+        if myfs == None or menu(myfs) == -1:
+            return
     
 main()
