@@ -1,11 +1,12 @@
 from _io import BufferedRandom
-import config,Converter
+import config,Converter,os,datetime
 from utils import generateID, getMAC, sha256, bytesToInt, aesDecrypt, aesEncrypt, hkdf, strSize, overwrite
 class MYFS:
     def __init__(self,myfsFile: BufferedRandom = None,sysFile: BufferedRandom =None):
         self.label = None
         self.id = None
         self.machine_id = None
+        self.allFiles =[]
         
         self.access_password = None
         self.sys_password = None
@@ -15,8 +16,8 @@ class MYFS:
         
         self.sys_size=None
         self.sys_index = None
-        self.max_file_size = None
-        self.max_file = None
+        self.max_file_size = config.MAX_FILE_SIZE
+        self.max_file = config.MAX_FILE
         
         self.cluster_size = None
         self.entry_size=None
@@ -58,7 +59,7 @@ class MYFS:
         self.sysFile=open('./MYFS/' + label +'_SYS.dat','w+b')
         self.sysFile.write(label_sys)
         self.myfsFile=open('./MYFS/' + label +'_MYFS.dat','w+b')
-        self.myfsFile.seek(1024)
+        self.myfsFile.write(1024*b'\x00')
         self.myfsFile.write(label_myfs)
 
     def createSystemRegion(self, label: str, password: str):
@@ -188,8 +189,6 @@ class MYFS:
         self.id = volumeID
         self.machine_id = machineID
         
-        self.max_file_size = None
-        self.max_file = None
         self.sys_size= 1024
         self.sys_index = 0
         
@@ -301,4 +300,107 @@ class MYFS:
         pass
 
     #====================================================MYFS DATA==================================
+    def ImportFile(self,path):
+        self.sys_index = config.SYS_INDEX
+        self.cluster_size = config.CLUSTER_SIZE
+        self.entry_size=config.ENTRY_SIZE
+
+        self.bitmap_size = config.BITMAP_SIZE
+        self.bitmap_index = config.BITMAP_INDEX
+
+        self.backup_size = config.BACKUP_SIZE
+        self.backup_index = config.BACKUP_INDEX
+
+        self.sdet_size = config.SDET_SIZE
+        self.sdet_index = config.SDET_INDEX
+        
+        self.cluster_start = config.CLUSTER_START
+
+        size=os.path.getsize(path)
+        if size >self.max_file_size:
+            raise ValueError('File is too large!')
+        filename = path.split('/')[len(path.split('/'))-1]
+        if filename in self.allFiles:
+            raise ValueError('File is exist on MYFS!')
+        if len(self.allFiles) == self.max_file:
+            raise ValueError('The system has reached the maximum file')
+        #if os.path.getsize(path) < 100*1024*1024:
+            #backup
+        entry = b'\x01'
+        #ngay tao
+        current_time = datetime.datetime.now()
+        y,m,d= current_time.year-1980, current_time.month, current_time.day
+        byear = Converter.decimalToBit(y,0) 
+        if len(byear) !=7: byear = '0'*(7-len(byear)) +byear
+        bmonth= Converter.decimalToBit(m,0) 
+        if len(bmonth) !=4: bmonth = '0'*(4-len(bmonth)) +bmonth
+        bdate = Converter.decimalToBit(d,0) 
+        if len(bdate) !=5: bdate = '0'*(5-len(bdate)) +bdate
+        Date= Converter.bitstring_to_bytes(byear+bmonth+bdate,2)
+        #gio tao
+        h,m,s= current_time.hour, current_time.minute, current_time.second//2
+        bhour = Converter.decimalToBit(h,0)
+        if len(bhour) !=5: bhour = '0'*(5-len(bhour)) +bhour
+        bminute= Converter.decimalToBit(m,0) 
+        if len(bminute) !=6: bminute = '0'*(6-len(bminute)) +bminute
+        bsecond = Converter.decimalToBit(s,0) 
+        if len(bsecond) !=5: bsecond = '0'*(5-len(bsecond)) +bsecond
+        Time= Converter.bitstring_to_bytes(bhour+bminute+bsecond,2)
+        entry+=Date+Time+Date+Time
+        entry+=Converter.intToByte(size,4)
+        entry+=b'\x00'
+        entry+=b'\x00'*32
+        f=open(path,'rb')
+        data = f.read()
+        f.close()
+        entry+=sha256(data)
+        entry+= Converter.intToByte(len(filename),1)
+        entry+= Converter.intToByte(len(path),1)
+        entry+=filename.encode()
+        entry+=path.encode()
+        if size < 100*1024*1024:
+            entry+=b'\x01'
+        else: entry+= b'\x00'
+        #data run
+        pos = self.findAvalibleEntry()
+        print(pos)
+
+    def findAvalibleEntry(self):
+        self.myfsFile.seek(self.backup_index-self.entry_size)
+        if self.myfsFile.read(1) != b'\x00':
+            #find entry deleted with max size
+            maxsize,index,pos = 0,self.sdet_index,-1
+            self.myfsFile.seek(index)
+            while index<self.backup_index:
+                if self.myfsFile.read(1) ==b'\x0E':
+                    self.myfsFile.seek(index+9)
+                    l = int.from_bytes(self.myfsFile.read(4),"big")
+                    if l >max:
+                        maxsize,pos = l,index
+                index+=self.entry_size
+                self.myfsFile.seek(index)
+            return pos
+
+        index = self.sdet_index
+        self.myfsFile.seek(index)
+        while index<self.backup_index:
+            if self.myfsFile.read(1) ==b'\x00':
+                return index
+            index+=self.entry_size
+            self.myfsFile.seek(index)
+        return -1
+
+
+    def getOffset(self,cluster):
+        return self.clustor_start+(cluster-1)*self.clustor_size
+
+
+    def ExportFile(self,filename):
+        pass
+    def setFilePassword(self,filename,newpassword,oldpassword=''):
+        pass
+    def deleteFile(self,filename):
+        pass
+    def RecoveryMode(self):
+        pass
     

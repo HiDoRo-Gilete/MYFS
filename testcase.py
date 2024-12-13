@@ -27,7 +27,15 @@ def testUnprotectedMYFS():
     filemyfs = open('./MYFS/G_MYFS.dat','r+b')
     myfs = None
     myfs = MYFS.MYFS(filemyfs,filesys)
+    filesys.seek(0)
+    data = filesys.read(1024)
+    print(data)
+def testImport():
+    filesys = open('./MYFS/G_SYS.dat','r+b')
+    filemyfs = open('./MYFS/G_MYFS.dat','r+b')
+    myfs = MYFS.MYFS(filemyfs,filesys)
+    myfs.ImportFile('D:/code python/2024/ATPHDL/FinalProject/temp/MYFS/Converter.py')
 def test():
-    testUnprotectedMYFS()
+    testImport()
     
 test()
