@@ -23,15 +23,31 @@ def bitstring_to_bytes(s,numbyte):
 
 def intToByte(num,numbyte):
     return num.to_bytes(numbyte, byteorder ='big')
-def createDatarun(arr):
-    d = b''
-    for item in arr:
-        a = item[0]//256 +1
-        b = item[1]//256 +1
-        d+= (a*16+b).to_bytes(1,'big')
-        d+= item[0].to_bytes(a,'big')
-        d+=item[1].to_bytes(b,'big')
-    return d
+def createDatarun(bit_string,l):
+    index = 0
+    n = len(bit_string)
+    ar,total = [],0
+    while index< n :
+        if bit_string[index] == '0':
+            start = index
+            length = 0
+            while index<n and bit_string[index] == '0' and total != l:
+                length += 1
+                index+= 1
+                total += 1
+            ar.append([start,length])
+            if total == l:
+                d = b''
+                for item in ar:
+                    a = item[0]//256 +1
+                    b = item[1]//256 +1
+                    d+= (a*16+b).to_bytes(1,'big')
+                    d+= item[0].to_bytes(a,'big')
+                    d+=item[1].to_bytes(b,'big')
+                    #print(d)
+                return d
+        index+=1
+
 def getDatarun(b_dr):
     arr=[]
     i=0

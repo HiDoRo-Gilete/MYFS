@@ -36,6 +36,8 @@ class MYFS:
         self.read_result = None
         if sysFile!=None and myfsFile !=None:
             self.read_result = self.getInfo()
+            self.allFiles = self.List()
+            print(self.allFiles)
 
     def createMYFS(self,label = None, password=None):
         self.label = label
@@ -315,12 +317,13 @@ class MYFS:
         self.sdet_index = config.SDET_INDEX
         
         self.cluster_start = config.CLUSTER_START
+        self.cluster_size = config.CLUSTER_SIZE
 
         size=os.path.getsize(path)
         if size >self.max_file_size:
             raise ValueError('File is too large!')
         filename = path.split('/')[len(path.split('/'))-1]
-        if filename in self.allFiles:
+        if filename in [fn['filename'] for fn in self.allFiles]:
             raise ValueError('File is exist on MYFS!')
         if len(self.allFiles) == self.max_file:
             raise ValueError('The system has reached the maximum file')
@@ -349,11 +352,14 @@ class MYFS:
         entry+=Date+Time+Date+Time
         entry+=Converter.intToByte(size,4)
         entry+=b'\x00'
+        entry+=b'\x00'*8
         entry+=b'\x00'*32
         f=open(path,'rb')
         data = f.read()
         f.close()
         entry+=sha256(data)
+        print(len(entry))
+        entry+=b'\x00'
         entry+= Converter.intToByte(len(filename),1)
         entry+= Converter.intToByte(len(path),1)
         entry+=filename.encode()
@@ -364,6 +370,57 @@ class MYFS:
         #data run
         pos = self.findAvalibleEntry()
         print(pos)
+        self.myfsFile.seek(self.bitmap_index)
+        bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
+        numclustor = os.path.getsize(path) //self.cluster_size +1
+        entry += Converter.createDatarun(bitstring,numclustor)
+        #print(entry)
+        self.myfsFile.seek(pos)
+        self.myfsFile.write(entry)
+
+    def List(self):
+        list=[]
+        self.myfsFile.seek(self.sdet_index)
+        pos = self.sdet_index
+        entry = self.myfsFile.read(self.entry_size)
+        while entry[0] != 0:
+            if entry[0] == 1 and entry[86] == 0:
+                filesize = int.from_bytes(entry[9:13])
+                filenamelen = entry[87]
+                pathlen = entry[88]
+                bytedate_create = Converter.decimalToBit(entry[1],1)+Converter.decimalToBit(entry[2],1)
+                y1 = Converter.bitstring_to_bytes(bytedate_create[0:7],1)[0]
+                m1= Converter.bitstring_to_bytes(bytedate_create[7:11],1)[0]
+                d1 = Converter.bitstring_to_bytes(bytedate_create[11:16],1)[0]
+                bytetime_create = Converter.decimalToBit(entry[3],1)+Converter.decimalToBit(entry[4],1)
+                h1 = Converter.bitstring_to_bytes(bytetime_create[0:5],1)[0]
+                mi1= Converter.bitstring_to_bytes(bytetime_create[5:11],1)[0]
+                s1 = Converter.bitstring_to_bytes(bytetime_create[11:16],1)[0]
+
+                bytedate_modifier = Converter.decimalToBit(entry[5],1)+Converter.decimalToBit(entry[6],1)
+                y2 = Converter.bitstring_to_bytes(bytedate_modifier[0:7],1)[0]
+                m2= Converter.bitstring_to_bytes(bytedate_modifier[7:11],1)[0]
+                d2 = Converter.bitstring_to_bytes(bytedate_modifier[11:16],1)[0]
+                bytetime_modifier = Converter.decimalToBit(entry[7],1)+Converter.decimalToBit(entry[8],1)
+                h2 = Converter.bitstring_to_bytes(bytetime_modifier[0:5],1)[0]
+                mi2= Converter.bitstring_to_bytes(bytetime_modifier[5:11],1)[0]
+                s2 = Converter.bitstring_to_bytes(bytetime_modifier[11:16],1)[0]
+
+                isencrypt = 'yes' if entry[14] == 0 else 'no'
+                filename = entry[89:89+filenamelen].decode()
+                path=entry[89+filenamelen:89+filenamelen+pathlen].decode()
+                list.append({'filename':filename,
+                             'path':path,
+                             'password': isencrypt,
+                             'date create':str(d1)+'/'+str(m1)+'/'+str(y1)+' '+str(h1)+':'+str(mi1)+':'+str(s1),
+                             'date modifier':str(d2)+'/'+str(m2)+'/'+str(y2)+' '+str(h2)+':'+str(mi2)+':'+str(s2),
+                             'size':filesize
+                               })
+            pos+=self.entry_size
+            self.myfsFile.seek(pos)
+            entry=self.myfsFile.read(self.entry_size)
+        return list
+
 
     def findAvalibleEntry(self):
         self.myfsFile.seek(self.backup_index-self.entry_size)

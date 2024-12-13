@@ -34,8 +34,13 @@ def testImport():
     filesys = open('./MYFS/G_SYS.dat','r+b')
     filemyfs = open('./MYFS/G_MYFS.dat','r+b')
     myfs = MYFS.MYFS(filemyfs,filesys)
-    myfs.ImportFile('D:/code python/2024/ATPHDL/FinalProject/temp/MYFS/Converter.py')
+    try:
+        myfs.ImportFile('D:/code python/2024/ATPHDL/FinalProject/temp/MYFS/Converter.py')
+    except Exception as e:
+        print(e)
+    filemyfs.seek(myfs.sdet_index)
 def test():
+    #testUnprotectedMYFS()
     testImport()
     
 test()
