@@ -390,25 +390,56 @@ class MYFS:
         data = f.read()
         f.close()
         entry+=sha256(data)
-        print(len(entry))
+        #print(len(entry))
         entry+=b'\x00'
         entry+= Converter.intToByte(len(filename),1)
         entry+= Converter.intToByte(len(path),1)
         entry+=filename.encode()
         entry+=path.encode()
-        if size < 100*1024*1024:
-            entry+=b'\x01'
-        else: entry+= b'\x00'
         #data run
         pos = self.findAvalibleEntry()
-        print(pos)
+        #print(pos)
         self.myfsFile.seek(self.bitmap_index)
         bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
         numclustor = os.path.getsize(path) //self.cluster_size +1
-        entry += Converter.createDatarun(bitstring,numclustor)
+        datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numclustor)
+        entry+=datarun
+        fs = open(path,'rb')
+        for item in arr_Datarun:
+            self.myfsFile.seek(self.getOffset(item[0]))
+            for i in range(item[1]):
+                datasrc = fs.read(self.cluster_size)
+                self.myfsFile.write(datasrc)
+        newbyte = Converter.bitstring_to_bytes(newbitstring,self.bitmap_size)
+        self.myfsFile.seek(self.bitmap_index)
+        self.myfsFile.write(newbyte)
         #print(entry)
         self.myfsFile.seek(pos)
         self.myfsFile.write(entry)
+
+        #backup
+        if size <100*1024*1024:
+            c_entry = entry[:86]+b'\x01'+entry[87:]
+            pos = self.findAvalibleEntry()
+            #print(pos)
+            self.myfsFile.seek(self.bitmap_index)
+            bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
+            #numclustor = os.path.getsize(path) //self.cluster_size +1
+            datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numclustor)
+            entry+=datarun
+            fs.seek(0)
+            for item in arr_Datarun:
+                self.myfsFile.seek(self.getOffset(item[0]))
+                for i in range(item[1]):
+                    datasrc = fs.read(self.cluster_size)
+                    self.myfsFile.write(datasrc)
+            newbyte = Converter.bitstring_to_bytes(newbitstring,self.bitmap_size)
+            self.myfsFile.seek(self.bitmap_index)
+            self.myfsFile.write(newbyte)
+            #print(entry)
+            self.myfsFile.seek(pos)
+            self.myfsFile.write(c_entry)
+        self.allFiles=self.List()
 
     def List(self):
         list=[]
@@ -481,15 +512,78 @@ class MYFS:
 
 
     def getOffset(self,cluster):
-        return self.clustor_start+(cluster-1)*self.clustor_size
+        return self.cluster_start+(cluster-1)*self.cluster_size
 
 
     def ExportFile(self,filename):
-        pass
+        exportfile =filename.encode()
+        pos,entry,filenamelen = -1,None,0
+        index = self.sdet_index
+        self.myfsFile.seek(index)
+        while index<self.backup_index:
+            entry=self.myfsFile.read(self.entry_size)
+            filenamelen = entry[87]
+            if entry[0] == 1 and exportfile == entry[89:89+filenamelen] and entry[86] == 0:
+                pos = index
+                break
+            index+=self.entry_size
+            self.myfsFile.seek(index)
+        if pos <0:
+            raise ValueError('Filename is not exists in cloud! Please check and try again!')
+        path = entry[89+filenamelen:89+filenamelen+entry[88]].decode()
+        filedes = None
+        try:
+            filedes = open(path,'w+b')
+        except:
+            newpath = 'C:/Users/'+path.split('/')[len(path.split('/'))-1]
+            print(path+' Cannot found! The new path file is '+newpath)
+            filedes = open(newpath,'w+b')
+        datarun = entry[89+filenamelen+entry[88]:]
+        datarun=datarun[:datarun.index(b'\x00')]
+        arr = Converter.getDatarun(datarun)
+        for item in arr:
+            self.myfsFile.seek(self.getOffset(item[0]))
+            for i in range(item[1]):
+                filedes.write(self.myfsFile.read(self.entry_size))
+        filedes.close()
+        #idFile,index = pos//128,pos%128
     def setFilePassword(self,filename,newpassword,oldpassword=''):
         pass
     def deleteFile(self,filename):
-        pass
+        exportfile =filename.encode()
+        pos,entry= [],None
+        index = self.sdet_index
+        self.myfsFile.seek(index)
+        while index<self.backup_index:
+            entry=self.myfsFile.read(self.entry_size)
+            filenamelen = entry[87]
+            if entry[0] == 1 and exportfile == entry[89:89+filenamelen]:
+                pos.append(index)
+            index+=self.entry_size
+            self.myfsFile.seek(index)
+        if len(pos) == 0:
+            raise ValueError('Filename is not exists in MYFS! Please check and try again!')
+        #print(pos)
+        for p in pos:
+            self.myfsFile.seek(p)
+            self.myfsFile.write(b'\x0E')
+        self.allFiles =  self.List()
     def RecoveryMode(self):
-        pass
+        pos,entry,count= [],None,0
+        index = self.sdet_index
+        self.myfsFile.seek(index)
+        while index<self.backup_index:
+            entry=self.myfsFile.read(self.entry_size)
+            if entry[0] == 14:
+                if entry[86] ==0:
+                    count+=1
+                pos.append(index)
+            index+=self.entry_size
+            self.myfsFile.seek(index)
+        #print(pos)
+        for p in pos:
+            self.myfsFile.seek(p)
+            self.myfsFile.write(b'\x01')
+        self.allFiles =  self.List()
+        print('Find and recovery ',count,' files')
     

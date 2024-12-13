@@ -35,7 +35,8 @@ def createDatarun(bit_string,l):
                 length += 1
                 index+= 1
                 total += 1
-            ar.append([start,length])
+            ar.append([start+1,length])
+            bit_string= bit_string[0:start]+'1'*length+bit_string[start+length:]
             if total == l:
                 d = b''
                 for item in ar:
@@ -45,7 +46,7 @@ def createDatarun(bit_string,l):
                     d+= item[0].to_bytes(a,'big')
                     d+=item[1].to_bytes(b,'big')
                     #print(d)
-                return d
+                return d,bit_string,ar
         index+=1
 
 def getDatarun(b_dr):
