@@ -1,5 +1,5 @@
 from _io import BufferedRandom
-import config
+import config,Converter
 from utils import generateID, getMAC, sha256, bytesToInt, aesDecrypt, aesEncrypt, hkdf, strSize, overwrite
 class MYFS:
     def __init__(self,myfsFile: BufferedRandom = None,sysFile: BufferedRandom =None):
@@ -58,6 +58,7 @@ class MYFS:
         self.sysFile=open('./MYFS/' + label +'_SYS.dat','w+b')
         self.sysFile.write(label_sys)
         self.myfsFile=open('./MYFS/' + label +'_MYFS.dat','w+b')
+        self.myfsFile.seek(1024)
         self.myfsFile.write(label_myfs)
 
     def createSystemRegion(self, label: str, password: str):
@@ -73,15 +74,15 @@ class MYFS:
         # print(len(systemData)) #48
         self.access_password = None if password == None else accessPwdHash
         
-        clusterSize = self.cluster_size.to_bytes(4, "big", signed=False) # 4 bytes
-        entrySize = self.entry_size.to_bytes(4, "big", signed=False) # 4 bytes
-        bitMapSize = self.bitmap_size.to_bytes(4, "big", signed=False) # 4 bytes
-        sdetSize = self.sdet_size.to_bytes(4, "big", signed=False) # 4 bytes
-        backupSize = self.backup_size.to_bytes(4, "big", signed=False) # 4 bytes
-        bitMapOffset = self.bitmap_index.to_bytes(4, "big", signed=False) # 4 bytes
-        sdetOffset = self.sdet_index.to_bytes(4, "big", signed=False) # 4 bytes
-        backupOffset = self.backup_index.to_bytes(4, "big", signed=False) # 4 bytes
-        dataOffset = self.cluster_start.to_bytes(4, "big", signed=False) # 4 bytes
+        clusterSize = config.CLUSTER_SIZE.to_bytes(4, "big", signed=False) # 4 bytes
+        entrySize = config.ENTRY_SIZE.to_bytes(4, "big", signed=False) # 4 bytes
+        bitMapSize = config.BITMAP_SIZE.to_bytes(4, "big", signed=False) # 4 bytes
+        sdetSize = config.SDET_SIZE.to_bytes(4, "big", signed=False) # 4 bytes
+        backupSize = config.BACKUP_SIZE.to_bytes(4, "big", signed=False) # 4 bytes
+        bitMapOffset = config.BITMAP_INDEX.to_bytes(4, "big", signed=False) # 4 bytes
+        sdetOffset = config.SDET_INDEX.to_bytes(4, "big", signed=False) # 4 bytes
+        backupOffset = config.BACKUP_INDEX.to_bytes(4, "big", signed=False) # 4 bytes
+        dataOffset = config.CLUSTER_START.to_bytes(4, "big", signed=False) # 4 bytes
         systemData += clusterSize + entrySize + bitMapSize + sdetSize + backupSize + bitMapOffset + sdetOffset + backupOffset + dataOffset
         # print(len(systemData)) # 48 + 36 = 84
         endingMarker = "MYFS".encode(encoding="ascii") # 4 bytes
@@ -298,3 +299,6 @@ class MYFS:
         # self.sysFile=open('./MYFS/' + self.label +'_SYS.dat','w+b')
         print("Successfully updated!")    
         pass
+
+    #====================================================MYFS DATA==================================
+    
