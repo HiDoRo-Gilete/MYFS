@@ -67,11 +67,19 @@ def testRecovery():
         myfs.RecoveryMode()
     except Exception as e:
         print(e)
+def testPWFile():
+    filesys = open('./MYFS/G_SYS.dat','r+b')
+    filemyfs = open('./MYFS/G_MYFS.dat','r+b')
+    myfs = MYFS.MYFS(filemyfs,filesys)
+    try:
+        myfs.setFilePassword('Converter.py')
+    except Exception as e:
+        print(e)
 def test():
     #testUnprotectedMYFS()
     #testImport()
     #testExport()
     #testDelete()
-    testRecovery()
-    
+    #testRecovery()
+    testPWFile()
 test()
