@@ -39,7 +39,7 @@ class MYFS:
         if sysFile!=None and myfsFile !=None:
             self.read_result = self.getInfo()
             self.allFiles = self.List()
-            print(self.allFiles)
+            #print(self.allFiles)
 
     def createMYFS(self,label = None, password=None):
         self.label = label
@@ -388,10 +388,12 @@ class MYFS:
         entry+=b'\x00'
         entry+=b'\x00'*8
         entry+=b'\x00'*32
-        f=open(path,'rb')
-        data = f.read()
-        f.close()
-        entry+=sha256(data)
+        if size < 100*1024*1024:
+            f=open(path,'rb')
+            data = f.read()
+            f.close()
+            entry+=sha256(data)
+        else: entry+= b'\x00' *32
         #print(len(entry))
         entry+=b'\x00'
         entry+= Converter.intToByte(len(filename),1)
@@ -418,7 +420,7 @@ class MYFS:
         #print(entry)
         self.myfsFile.seek(pos)
         self.myfsFile.write(entry)
-
+        POS = [pos]
         #backup
         if size <100*1024*1024:
             c_entry = entry[:86]+b'\x01'+entry[87:]
@@ -426,9 +428,9 @@ class MYFS:
             #print(pos)
             self.myfsFile.seek(self.bitmap_index)
             bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
+            print(bitstring[:10])
             #numclustor = os.path.getsize(path) //self.cluster_size +1
             datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numclustor)
-            entry+=datarun
             fs.seek(0)
             for item in arr_Datarun:
                 self.myfsFile.seek(self.getOffset(item[0]))
@@ -440,7 +442,31 @@ class MYFS:
             self.myfsFile.write(newbyte)
             #print(entry)
             self.myfsFile.seek(pos)
+            index_datarun = 89 +c_entry[87]+c_entry[88]
+            c_entry = c_entry[:index_datarun] + datarun+c_entry[index_datarun+len(datarun):]
             self.myfsFile.write(c_entry)
+            POS.append(pos)
+        # print(POS)
+        # for p in POS:
+        #     self.myfsFile.seek(p)
+        #     entry = self.myfsFile.read(self.entry_size)
+        #     filenamelen = entry[87]
+        #     datarun = entry[89+filenamelen+entry[88]:]
+        #     datarun=datarun[:datarun.index(b'\x00')]
+        #     arr = Converter.getDatarun(datarun)
+        #     for item in arr:
+        #         self.myfsFile.seek(self.getOffset(item[0]))
+        #         for i in range(item[1]):
+        #             dataread = self.myfsFile.read(self.cluster_size)
+        #             #print('1======\n',self.getOffset(item[0]),self.sdet_index)
+        #             if oldkey !=b'':
+        #                 dataread=aes2.decrypt(dataread)
+        #             dataread = n_aes.encrypt(dataread)
+        #             self.myfsFile.seek(self.getOffset(item[0]+i))
+        #             self.myfsFile.write(dataread)
+        #     entry = entry[:13]+b'\x01'+n_aes.nonce+sha256(newkey)+entry[54:]
+        #     self.myfsFile.seek(p)
+        #     self.myfsFile.write(entry)
         self.allFiles=self.List()
 
     def List(self):
@@ -585,7 +611,6 @@ class MYFS:
                 key = hashlib.md5(pw.encode()).digest()
                 hashpw = sha256(key)
             aes = AES.new(key,mode=AES.MODE_CTR,nonce=entry[14:22])
-            print(key,entry[14:22])
         for item in arr:
             self.myfsFile.seek(self.getOffset(item[0]))
             for i in range(item[1]):
@@ -593,9 +618,11 @@ class MYFS:
                 if aes !=None:
                     datawrite = aes.decrypt(datawrite)
                 if i ==item[1] - 1 and arr.index(item) == len(arr) -1:
-                    datawrite = datawrite[:size%self.cluster_size]
+                     datawrite = datawrite[:size%self.cluster_size]
                 filedes.write(datawrite)
+                #print(datawrite)
         filedes.close()
+        print('File is Exported at ',path)
         #idFile,index = pos//128,pos%128
     def setFilePassword(self,filename):
         filen =filename.encode()
@@ -637,11 +664,11 @@ class MYFS:
             if renewpw.lower() == 'c': return
         newkey = hashlib.md5(newpw.encode()).digest()
         n_aes = AES.new(newkey,mode=AES.MODE_CTR)
-        print(newkey,n_aes.nonce)
+        aes2 = None
         if oldkey!=b'':
             aes2 = AES.new(oldkey,mode=AES.MODE_CTR,nonce=entry[14:22])
         size = int.from_bytes(entry[9:13])
-        #hashcontent = 
+        #hashcontent =
         for p in pos:
             self.myfsFile.seek(p)
             entry = self.myfsFile.read(self.entry_size)
@@ -653,8 +680,8 @@ class MYFS:
                 self.myfsFile.seek(self.getOffset(item[0]))
                 for i in range(item[1]):
                     dataread = self.myfsFile.read(self.cluster_size)
+                    #print(self.getOffset(item[0]),'\n',dataread)
                     if oldkey !=b'':
-                        print("first decrypt")
                         dataread=aes2.decrypt(dataread)
                     dataread = n_aes.encrypt(dataread)
                     self.myfsFile.seek(self.getOffset(item[0]+i))

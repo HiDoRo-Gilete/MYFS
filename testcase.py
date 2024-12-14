@@ -78,8 +78,8 @@ def testPWFile():
 def test():
     #testUnprotectedMYFS()
     #testImport()
-    #testExport()
     #testDelete()
     #testRecovery()
-    testPWFile()
+    #testPWFile()
+    testExport()
 test()
