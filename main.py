@@ -3,7 +3,7 @@ import os
 
 def createMyFS():
     x = None
-    x = input("Create a new MYFS ('enter' to continue)")
+    x = input("Create a new MYFS! 'enter' to proceed: ")
     if (x != ''):
         return None
     
@@ -33,7 +33,7 @@ def selectMYFS():
                         labels.append(label)
                     
 
-        print("----------------------")
+        print("-----------MAIN-----------")
         print('List of volumes:')
         for i, label in enumerate(labels):
             print(str(i) + ".", label)
@@ -59,7 +59,9 @@ def selectMYFS():
                 else:
                     print('No such volume!')
             except:
-                pass                
+                if option.upper() in labels:
+                    label = option.upper()
+                                   
         if label != None:
             try:
                 label = label.upper()
@@ -68,7 +70,8 @@ def selectMYFS():
                 myfs = MYFS.MYFS(myfsFile, sysFile)
                 if not myfs.read_result == True:
                     myfs = None
-            except:
+            except Exception as e:
+                print(e)
                 print('Failed to read volume')
                 myfs = None
                 
@@ -78,7 +81,7 @@ def menu(myfs: MYFS.MYFS):
     action = -1
     while True:
         myfs.info()
-        print('------------------MENU---------------------')
+        print('------------------MENU------------------')
         print("0. List")
         print("1. Import")
         print("2. Export")
@@ -86,7 +89,7 @@ def menu(myfs: MYFS.MYFS):
         print("4. Recover")
         print("5. Encrypt file")
         print("6. Update volume's password")
-        print("7. Encrypt volume's sys file")
+        print("7. Encrypt volume's SYS file")
         print("b. Back")
         print("e. Exit")
         action = input(">> ")
@@ -99,33 +102,65 @@ def menu(myfs: MYFS.MYFS):
             if (action < 0 and action > 8):
                 continue
             if action == 0:
-                print('Developing...')
+                print("----------------List files----------------")
+                myfs.printFiles()
+                input()
                 pass
             elif action == 1:
-                print('Developing...')
-                pass
+                print("----------------Import file----------------")
+                while True:
+                    path = input("Enter the file's path or b/B to back: ") 
+                    if (path.lower() == "b"):
+                        break
+                    if not os.path.isfile(path):
+                        print("File does not exist :(\n")
+                    else:
+                        myfs.ImportFile(path)
+                        input()
+                        break
+                
             elif action == 2:
-                print('Developing...')
-                pass
+                print("----------------Export file----------------")
+                myfs.printFiles()
+                filename = input("Enter the file's name or b/B to back: ") 
+                if (filename.lower() != "b"):
+                    myfs.ExportFile(filename)
+                    input()
+                
             elif action == 3:
-                print('Developing...')
-                pass
+                print("----------------Delete file----------------")
+                myfs.printFiles()
+                filename = input("Enter the file's name or b/B to back: ") 
+                if (filename.lower() != "b"):
+                    myfs.deleteFile(filename)
+                    input()
+                    
             elif action == 4:
-                print('Developing...')
-                pass
+                print("----------------Recovery----------------")
+                myfs.RecoveryMode()
+                myfs.printFiles()
+                input()
+                
             elif action == 5:
-                print('Developing...')
-                pass
+                print("----------------Encrypt file----------------")
+                myfs.printFiles()
+                filename = input("Enter the file's name or b/B to back: ") 
+                if (filename.lower() != "b"):
+                    myfs.setFilePassword()
+                    input()
+                
             elif action == 6:
                 myfs.updateFSPassword()
-                pass
+                
             elif action == 7:
                 myfs.updateSysPassword()
-                pass
+                
             elif action == 8:
                 return 0
+            
             elif action == 9:
                 return -1
+            
         except:
             pass
         

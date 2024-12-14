@@ -30,7 +30,7 @@ def strSize(n: int, unit: str = "bytes") -> str:
     elif unit == "GB":
         divisor *= 1024
     
-    return str(floor(n/divisor)) + " " + unit
+    return str(floor(n/divisor)) + " " + ("" if unit == "bytes" else unit)
 
 def hkdf(master_secret: str) -> bytes:
     salt = b'\x00' * 16

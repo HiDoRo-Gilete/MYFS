@@ -1,6 +1,6 @@
 # test
 test.py
-
+test*
 # 
 MYFS/*
 !MYFS/.gitkeep 

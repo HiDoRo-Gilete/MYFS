@@ -1,7 +1,7 @@
 from _io import BufferedRandom
 import config,Converter,os,datetime
 import hashlib
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES 
 from utils import generateID, getMAC, sha256, bytesToInt, aesDecrypt, aesEncrypt, hkdf, strSize, overwrite
 class MYFS:
     def __init__(self,myfsFile: BufferedRandom = None,sysFile: BufferedRandom =None):
@@ -39,7 +39,6 @@ class MYFS:
         if sysFile!=None and myfsFile !=None:
             self.read_result = self.getInfo()
             self.allFiles = self.List()
-            #print(self.allFiles)
 
     def createMYFS(self,label = None, password=None):
         self.label = label
@@ -131,7 +130,7 @@ class MYFS:
         self.sys_password = sysPwdHash if isSysEncrypted == True else None 
 
         try:
-            print(endingMarker)
+            # print(endingMarker)
             if (endingMarker != "MYFS"):
                 print(endingMarker, "Invalid sys file")
                 return False
@@ -159,6 +158,7 @@ class MYFS:
             
         
         volumeLabel = (metadata[:1]).decode("ascii")
+        print("\nVolume: "+ volumeLabel +" - MYFS\n")
         volumeID = (metadata[1:9]).decode("ascii")
         machineID = hex(int.from_bytes(metadata[9:15], "big", signed=False))[2:]
         accessControlEnable = True if (metadata[15:16] == b'\x01') else False
@@ -207,9 +207,10 @@ class MYFS:
         return True
     
     def info(self):
-            print('------------VOLUME------------')
-            print("Label:", self.label)
-            print("ID:", self.id)
+            print()
+            print('------------INFO------------')
+            print("Volume Label:", self.label)
+            print("Volume ID:", self.id)
             print("Machine ID:", self.machine_id)
             print("Protection:", "None" if self.access_password == None else "Password")
             print("SYS encryption:", "False" if self.sys_password == None else "Yes")
@@ -218,8 +219,8 @@ class MYFS:
             print("Cluster size:", strSize(self.cluster_size, "KB"))
             print("Entry size:", strSize(self.entry_size, "KB"))
             print("Bitmap size:", strSize(self.bitmap_size, "KB"))
-            print("Sdet Size:", strSize(self.sdet_size, "KB"))
-            print("First cluster's offset:", strSize(self.cluster_start, "KB"))
+            print("SDET Size:", strSize(self.sdet_size, "KB"))
+            print("First cluster's offset:", strSize(self.cluster_start))
             print()
 
     def getInfo(self) -> bool:
@@ -229,10 +230,10 @@ class MYFS:
         return True
     
     def updateFSPassword(self):
-        print("-------Update volume password-------")
+        print("-----------Update Volume Password-----------")
         if (self.access_password != None):
             while True:
-                password = input("Enter current password (>=6) or b/B to back: ")
+                password = input("Enter current password or b/B to back: ")
                 if (password.lower() == 'b'):
                     return None
                 if (sha256(password.encode(encoding="utf-8")) == self.access_password):
@@ -270,7 +271,7 @@ class MYFS:
         pass
     
     def updateSysPassword(self):
-        print("-------Update password for sys file-------")
+        print("-----------Encrypt Volume SYS-----------")
         old_password = ""
         if (self.sys_password != None):
             while True:
@@ -284,7 +285,7 @@ class MYFS:
         
         password = ""
         while (len(password) < 6):
-            password = input("Enter new password or b/B to back: ")
+            password = input("Enter new password (>=6) or b/B to back: ")
             if (password.lower() == 'b'):
                 return None
             
@@ -335,8 +336,17 @@ class MYFS:
             return None
         return aesDecrypt(hkdf(sysPwd), sysEncryptedNonce, metadata)
 
+    def printFiles(self):
+        if len(self.allFiles) == 0:
+            print("Empty")
+        else:
+            for i, file in enumerate(self.allFiles):
+                print(str(i) + ".", file.get("filename"), "-", file.get("size"))
+        print()
     #====================================================MYFS DATA==================================
+                        
     def ImportFile(self,path):
+        
         self.sys_index = config.SYS_INDEX
         self.cluster_size = config.CLUSTER_SIZE
         self.entry_size=config.ENTRY_SIZE
@@ -358,7 +368,7 @@ class MYFS:
             raise ValueError('File is too large!')
         filename = path.split('/')[len(path.split('/'))-1]
         if filename in [fn['filename'] for fn in self.allFiles]:
-            raise ValueError('File is exist on MYFS!')
+            raise ValueError('File is existed on MYFS!')
         if len(self.allFiles) == self.max_file:
             raise ValueError('The system has reached the maximum file')
         #if os.path.getsize(path) < 100*1024*1024:
@@ -401,12 +411,12 @@ class MYFS:
         entry+=filename.encode()
         entry+=path.encode()
         #data run
-        pos = self.findAvalibleEntry()
+        pos = self.findAvailableEntry()
         #print(pos)
         self.myfsFile.seek(self.bitmap_index)
         bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
-        numclustor = os.path.getsize(path) //self.cluster_size +1
-        datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numclustor)
+        numcluster = os.path.getsize(path) //self.cluster_size +1
+        datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numcluster)
         entry+=datarun
         fs = open(path,'rb')
         for item in arr_Datarun:
@@ -424,13 +434,13 @@ class MYFS:
         #backup
         if size <100*1024*1024:
             c_entry = entry[:86]+b'\x01'+entry[87:]
-            pos = self.findAvalibleEntry()
+            pos = self.findAvailableEntry()
             #print(pos)
             self.myfsFile.seek(self.bitmap_index)
             bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
             print(bitstring[:10])
-            #numclustor = os.path.getsize(path) //self.cluster_size +1
-            datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numclustor)
+            #numcluster = os.path.getsize(path) //self.cluster_size +1
+            datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numcluster)
             fs.seek(0)
             for item in arr_Datarun:
                 self.myfsFile.seek(self.getOffset(item[0]))
@@ -467,7 +477,7 @@ class MYFS:
         #     entry = entry[:13]+b'\x01'+n_aes.nonce+sha256(newkey)+entry[54:]
         #     self.myfsFile.seek(p)
         #     self.myfsFile.write(entry)
-        self.allFiles=self.List()
+        self.allFiles = self.List()
 
     def List(self):
         list=[]
@@ -512,8 +522,7 @@ class MYFS:
             entry=self.myfsFile.read(self.entry_size)
         return list
 
-
-    def findAvalibleEntry(self):
+    def findAvailableEntry(self):
         self.myfsFile.seek(self.backup_index-self.entry_size)
         if self.myfsFile.read(1) != b'\x00':
             #find entry deleted with max size
@@ -563,10 +572,8 @@ class MYFS:
             self.myfsFile.seek(index)
         return -1
 
-
     def getOffset(self,cluster):
         return self.cluster_start+(cluster-1)*self.cluster_size
-
 
     def ExportFile(self,filename):
         exportfile =filename.encode()
@@ -582,14 +589,14 @@ class MYFS:
             index+=self.entry_size
             self.myfsFile.seek(index)
         if pos <0:
-            raise ValueError('Filename is not exists in cloud! Please check and try again!')
+            raise ValueError('Filename is not existed! Please check and try again!')
         path = entry[89+filenamelen:89+filenamelen+entry[88]].decode()
         filedes = None
         try:
             filedes = open(path,'w+b')
         except:
             newpath = 'C:/Users/'+path.split('/')[len(path.split('/'))-1]
-            print(path+' Cannot found! The new path file is '+newpath)
+            print(path+' Can not find! The new path file is '+newpath)
             filedes = open(newpath,'w+b')
         datarun = entry[89+filenamelen+entry[88]:]
         datarun=datarun[:datarun.index(b'\x00')]
@@ -604,7 +611,7 @@ class MYFS:
             while  hashpw != entry[22:54]:
                 count+=1
                 if count ==3: 
-                    print("Wrong more than 3 times! ")
+                    print("Wrong more than 3 times!")
                     return
                 pw = input("Wrong password! Try again(c to exit): ")
                 if pw.lower == 'c': return
@@ -622,8 +629,9 @@ class MYFS:
                 filedes.write(datawrite)
                 #print(datawrite)
         filedes.close()
-        print('File is Exported at ',path)
+        print('File is exported at ',path)
         #idFile,index = pos//128,pos%128
+    
     def setFilePassword(self,filename):
         filen =filename.encode()
         pos,entry= [],None
@@ -637,7 +645,7 @@ class MYFS:
             index+=self.entry_size
             self.myfsFile.seek(index)
         if len(pos) == 0:
-            raise ValueError('Filename is not exists in MYFS! Please check and try again!')
+            raise ValueError('File is not existed in MYFS! Please check and try again!')
         oldkey, newkey =b'',b''
         self.myfsFile.seek(pos[0])
         entry = self.myfsFile.read(self.entry_size)
@@ -647,14 +655,14 @@ class MYFS:
             oldkey = hashlib.md5(pw.encode()).digest()
             hashpw = sha256(oldkey)
             while hashpw != entry[22:54]:
-                pw = input("Invalid Password! Try again: ")
+                pw = input("Invalid password! Try again: ")
                 oldkey = hashlib.md5(pw.encode()).digest()
                 hashpw = sha256(oldkey)
                 count+=1
                 if count == 3:
                     print("Wrong more than 3 times! ")
                     return
-        newpw = input("Enter the new password(must be >= 8 characters): ")
+        newpw = input("Enter the new password (must be >= 8 characters): ")
         while len(newpw) < 8:
             newpw = input("Password must be >= 8 characters! Try again (c to exit): ")
             if newpw.lower() == 'c': return
@@ -689,8 +697,7 @@ class MYFS:
             entry = entry[:13]+b'\x01'+n_aes.nonce+sha256(newkey)+entry[54:]
             self.myfsFile.seek(p)
             self.myfsFile.write(entry)
-              
-                
+                           
     def deleteFile(self,filename):
         deleteFile =filename.encode()
         pos,entry= [],None
@@ -704,12 +711,13 @@ class MYFS:
             index+=self.entry_size
             self.myfsFile.seek(index)
         if len(pos) == 0:
-            raise ValueError('Filename is not exists in MYFS! Please check and try again!')
+            raise ValueError('File is not existed in MYFS! Please check and try again!')
         #print(pos)
         for p in pos:
             self.myfsFile.seek(p)
             self.myfsFile.write(b'\x0E')
-        self.allFiles =  self.List()
+        self.allFiles = self.List()
+    
     def RecoveryMode(self):
         pos,entry,count= [],None,0
         index = self.sdet_index
@@ -726,6 +734,6 @@ class MYFS:
         for p in pos:
             self.myfsFile.seek(p)
             self.myfsFile.write(b'\x01')
-        self.allFiles =  self.List()
-        print('Find and recovery ',count,' files')
+        self.allFiles = self.List()
+        print('Find and recover ',count,' files')
     
