@@ -13,7 +13,7 @@ def createMyFS():
         
     password = ""
     while (password != None and len(password) < 6):
-        password = input("Enter volume's protection password (>=6) or 'enter' to skip: ")
+        password = input("Enter volume's protection password (length >=6) or 'enter' to skip: ")
         if (password == ""):
             password = None
     myfs = MYFS.MYFS()
@@ -138,7 +138,6 @@ def menu(myfs: MYFS.MYFS):
             elif action == 4:
                 print("----------------Recovery----------------")
                 myfs.RecoveryMode()
-                myfs.printFiles()
                 input()
                 
             elif action == 5:
@@ -146,7 +145,7 @@ def menu(myfs: MYFS.MYFS):
                 myfs.printFiles()
                 filename = input("Enter the file's name or b/B to back: ") 
                 if (filename.lower() != "b"):
-                    myfs.setFilePassword()
+                    myfs.setFilePassword(filename)
                     input()
                 
             elif action == 6:

@@ -53,3 +53,53 @@ def aesDecrypt(key: bytes, nonce: bytes, cipher_text: bytes):
 def overwrite(fileobj, start,newbytes):
     fileobj.seek(start)
     fileobj.write(newbytes)    
+    
+def getFilename(path: str):
+    parts = path.split('/')
+    if len(parts) == 1:
+        parts = path.split('\\')
+    return parts[-1]
+
+# ==============Print files===============
+
+cols = ["Filename", "Size", "Creation date", "Modification date", "Original path", "Encryption"]
+lens = [30, 15, 20, 20, 30, 10]     
+
+def dStr(s, l):
+    return [s[i*l:min((i+1)*l, len(s))] for i in range(0, len(s) // l + 1)]
+
+def pStrs(attrArrs):
+    maxLine = max([ len(arr) for arr in attrArrs])
+    padd = "  "
+    for li in range(0, maxLine):
+        line = ""
+        for ci, arr in enumerate(attrArrs):
+            if li >= len(arr):
+                line += lens[ci] * " " + padd
+            else:
+                line += arr[li] + (lens[ci] - len(arr[li])) * " " + padd
+        print(line)
+
+def printFiles(files):
+    arrs = []
+    arrs.append(dStr(cols[0],lens[0])) 
+    arrs.append(dStr(cols[1],lens[1])) 
+    arrs.append(dStr(cols[2],lens[2])) 
+    arrs.append(dStr(cols[3],lens[3])) 
+    arrs.append(dStr(cols[4],lens[4])) 
+    arrs.append(dStr(cols[5],lens[5]))
+    pStrs(arrs)
+    if len(files) == 0:
+        print("Empty")
+        return
+        
+    for file in files:
+        arrs = []
+        arrs.append(dStr(str(file.get("filename")),lens[0])) 
+        arrs.append(dStr(str(file.get("size")),lens[1])) 
+        arrs.append(dStr(str(file.get("date create")),lens[2])) 
+        arrs.append(dStr(str(file.get("date modifier")),lens[3])) 
+        arrs.append(dStr(str(file.get("path")),lens[4])) 
+        arrs.append(dStr(str(file.get("password")),lens[5])) 
+        pStrs(arrs)
+        

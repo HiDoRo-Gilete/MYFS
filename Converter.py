@@ -54,6 +54,6 @@ def getDatarun(b_dr):
     i=0
     while i!= len(b_dr):
         a,b = b_dr[i]//16,b_dr[i]%16
-        arr.append([int.from_bytes(b_dr[i+1:i+a+1]),int.from_bytes(b_dr[i+a+1:i+a+b+1])])
+        arr.append([int.from_bytes(b_dr[i+1:i+a+1], "big"),int.from_bytes(b_dr[i+a+1:i+a+b+1], "big")])
         i = i+a+b+1
     return arr
