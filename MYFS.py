@@ -1,6 +1,5 @@
 from _io import BufferedRandom
 import config,Converter,os,datetime
-import hashlib
 from Cryptodome.Cipher import AES 
 from utils import generateID, getMAC, sha256, bytesToInt, aesDecrypt, aesEncrypt, hkdf, strSize, overwrite, getFilename, printFiles
 class MYFS:
@@ -593,16 +592,16 @@ class MYFS:
         if entry[13] ==1:
             pw = input("Enter the password: ")
             count = 0
-            key = hashlib.md5(pw.encode()).digest()
+            key = hkdf(pw)
             hashpw = sha256(key)
-            while  hashpw != entry[22:54]:
+            while hashpw != entry[22:54]:
                 count+=1
                 if count ==3: 
                     print("Wrong more than 3 times!")
                     return
                 pw = input("Wrong password! Try again (e/E to exit): ")
                 if pw.lower == 'e': return
-                key = hashlib.md5(pw.encode()).digest()
+                key = hkdf(pw)
                 hashpw = sha256(key)
             aes = AES.new(key,mode=AES.MODE_CTR,nonce=entry[14:22])
         for item in arr:
@@ -641,11 +640,11 @@ class MYFS:
         if entry[13] == 1: 
             count = 0
             pw = input('Please enter the old password: ')
-            oldkey = hashlib.md5(pw.encode()).digest()
+            oldkey = hkdf(pw)
             hashpw = sha256(oldkey)
             while hashpw != entry[22:54]:
                 pw = input("Invalid password! Try again: ")
-                oldkey = hashlib.md5(pw.encode()).digest()
+                oldkey = hkdf(pw)
                 hashpw = sha256(oldkey)
                 count+=1
                 if count == 3:
@@ -659,7 +658,7 @@ class MYFS:
         while renewpw != newpw:
             renewpw = input("Try again (e/E to exit): ")
             if renewpw.lower() == 'e': return
-        newkey = hashlib.md5(newpw.encode()).digest()
+        newkey = hkdf(newpw)
         n_aes = AES.new(newkey,mode=AES.MODE_CTR)
         aes2 = None
         if oldkey!=b'':

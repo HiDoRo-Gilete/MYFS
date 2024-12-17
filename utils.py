@@ -62,7 +62,7 @@ def getFilename(path: str):
 
 # ==============Print files===============
 
-cols = ["Filename", "Size", "Creation date", "Modification date", "Original path", "Encryption"]
+cols = ["Filename", "Size", "Creation date", "Modification date", "Import path", "Encryption"]
 lens = [30, 15, 20, 20, 30, 10]     
 
 def dStr(s, l):
