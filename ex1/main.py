@@ -10,6 +10,10 @@ endPNG = b'\x00\x00\x00\x00\x49\x45\x4E\x44\xAE\x42\x60\x82'
 endJPG = b'\xFF\xD9'
 #signal = b'\x85\x4E\x47\x0D\x0A\x1A\x0A'
 #ending
+try:
+    os.mkdir('Picture')
+except:
+    pass
 
 def progress(file):
     data = file.read(block)
@@ -28,7 +32,7 @@ def progress(file):
         if signal != None:
             count+=1
             newfile = str(count)+extend
-            desFile = open(newfile,'w+b')
+            desFile = open('./Picture/'+newfile,'w+b')
             size = 0
             while endsignal not in data:
                 if data.count(b'\x00') != block and data.count(b'\xFF') != block:
@@ -44,7 +48,7 @@ def progress(file):
         signal = None
     print('find',count,'file')
 
-file = open("W:/VHD/VHD1.vhd",'rb')
+file = open("W:/VHD/VHD1.Vol",'rb')
 block = 512
 
 thr = Thread(target=progress,args=(file,))
