@@ -341,23 +341,6 @@ class MYFS:
         print()
     #====================================================MYFS DATA==================================               
     def ImportFile(self,path):
-        
-        self.sys_index = config.SYS_INDEX
-        self.cluster_size = config.CLUSTER_SIZE
-        self.entry_size=config.ENTRY_SIZE
-
-        self.bitmap_size = config.BITMAP_SIZE
-        self.bitmap_index = config.BITMAP_INDEX
-
-        self.backup_size = config.BACKUP_SIZE
-        self.backup_index = config.BACKUP_INDEX
-
-        self.sdet_size = config.SDET_SIZE
-        self.sdet_index = config.SDET_INDEX
-        
-        self.cluster_start = config.CLUSTER_START
-        self.cluster_size = config.CLUSTER_SIZE
-
         size=os.path.getsize(path)
         if size >self.max_file_size:
             print('File is too large!')
@@ -416,6 +399,7 @@ class MYFS:
         numcluster = os.path.getsize(path) //self.cluster_size +1
         datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numcluster)
         entry+=datarun
+
         fs = open(path,'rb')
         for item in arr_Datarun:
             self.myfsFile.seek(self.getOffset(item[0]))
@@ -436,7 +420,6 @@ class MYFS:
             #print(pos)
             self.myfsFile.seek(self.bitmap_index)
             bitstring = ''.join(format(byte, '08b') for byte in self.myfsFile.read(self.bitmap_size))
-            print("Bitmap first 10 bit", bitstring[:10])
             #numcluster = os.path.getsize(path) //self.cluster_size +1
             datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numcluster)
             fs.seek(0)

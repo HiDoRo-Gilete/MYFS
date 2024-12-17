@@ -39,16 +39,16 @@ def testImport():
         # print(int.from_bytes(filemyfs.read(1)))
         # filemyfs.seek(myfs.sdet_index)
         # print(filemyfs.read(4096))
-        myfs.ImportFile('D:/code python/2024/ATPHDL/FinalProject/temp/MYFS/Converter.py')
+        myfs.ImportFile('D:/document/An ninh may tinh/lab 1/guid.docx')
     except Exception as e:
         print(e)
     filemyfs.seek(myfs.sdet_index)
 def testExport():
-    filesys = open('./MYFS/G_SYS.dat','r+b')
-    filemyfs = open('./MYFS/G_MYFS.dat','r+b')
+    filesys = open('./MYFS/V_SYS.dat','r+b')
+    filemyfs = open('./MYFS/V_MYFS.dat','r+b')
     myfs = MYFS.MYFS(filemyfs,filesys)
     try:
-        myfs.ExportFile('Converter.py')
+        myfs.ExportFile('21120253.docx')
     except Exception as e:
         print(e)
 def testDelete():
@@ -76,10 +76,10 @@ def testPWFile():
     except Exception as e:
         print(e)
 def test():
-    #testUnprotectedMYFS()
+    testUnprotectedMYFS()
     #testImport()
     #testDelete()
     #testRecovery()
     #testPWFile()
-    testExport()
+    #testExport()
 test()

@@ -23,6 +23,9 @@ def bitstring_to_bytes(s,numbyte):
 
 def intToByte(num,numbyte):
     return num.to_bytes(numbyte, byteorder ='big')
+def caclNum(x,i=0):
+    if x == 0: return i
+    return caclNum(x//256,i+1)
 def createDatarun(bit_string,l):
     index = 0
     n = len(bit_string)
@@ -40,8 +43,8 @@ def createDatarun(bit_string,l):
             if total == l:
                 d = b''
                 for item in ar:
-                    a = item[0]//256 +1
-                    b = item[1]//256 +1
+                    a = caclNum(item[0])
+                    b = caclNum(item[1])
                     d+= (a*16+b).to_bytes(1,'big')
                     d+= item[0].to_bytes(a,'big')
                     d+=item[1].to_bytes(b,'big')
@@ -54,6 +57,6 @@ def getDatarun(b_dr):
     i=0
     while i!= len(b_dr):
         a,b = b_dr[i]//16,b_dr[i]%16
-        arr.append([int.from_bytes(b_dr[i+1:i+a+1], "big"),int.from_bytes(b_dr[i+a+1:i+a+b+1], "big")])
+        arr.append([int.from_bytes(b_dr[i+1:i+a+1],'big'),int.from_bytes(b_dr[i+a+1:i+a+b+1],'big')])
         i = i+a+b+1
     return arr
