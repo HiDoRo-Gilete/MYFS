@@ -727,7 +727,32 @@ class MYFS:
         #print(pos)
         for p in pos:
             self.myfsFile.seek(p)
-            self.myfsFile.write(b'\x01')
+            entry = self.myfsFile.read(self.entry_size)
+            #print(entry)
+            entry = b'\x01' + entry[1:]
+            filename = entry[89:89+entry[87]].decode()
+            oldfilename = filename
+            path = entry[89+entry[87]:89+entry[87]+entry[88]].decode()
+            id = 0 
+            while filename in [file['filename'] for file in self.allFiles]:
+                id+=1
+                temp =filename.split('.')
+                filename = '.'.join(temp[0:len(temp)-1])
+                filename +='_'+str(id)+'.'+temp[len(temp)-1]
+                print(path,oldfilename,filename)
+                path = path.replace(oldfilename,filename)
+                
+            if id !=0: 
+                datarun = entry[89+entry[87]+entry[88]:self.entry_size-count*2-2]
+                count = id//10 +1
+                namelen = entry[87] + count+1
+                pathlen = entry[88]+count+1
+                entry = entry[:87]+namelen.to_bytes(1,'big')+pathlen.to_bytes(1,'big')+filename.encode()+path.encode()+datarun
+                print(len(entry))
+            
+            self.myfsFile.seek(p)  
+            self.myfsFile.write(entry)
+            
         self.allFiles = self.List()
         print('Found and recovered',count,'files!')
     

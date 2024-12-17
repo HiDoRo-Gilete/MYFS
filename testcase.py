@@ -60,8 +60,8 @@ def testDelete():
     except Exception as e:
         print(e)
 def testRecovery():
-    filesys = open('./MYFS/G_SYS.dat','r+b')
-    filemyfs = open('./MYFS/G_MYFS.dat','r+b')
+    filesys = open('./MYFS/T_SYS.dat','r+b')
+    filemyfs = open('./MYFS/T_MYFS.dat','r+b')
     myfs = MYFS.MYFS(filemyfs,filesys)
     try:
         myfs.RecoveryMode()
@@ -76,10 +76,10 @@ def testPWFile():
     except Exception as e:
         print(e)
 def test():
-    testUnprotectedMYFS()
+    #testUnprotectedMYFS()
     #testImport()
     #testDelete()
-    #testRecovery()
+    testRecovery()
     #testPWFile()
     #testExport()
 test()
