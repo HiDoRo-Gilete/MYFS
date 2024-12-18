@@ -32,7 +32,7 @@ def progress(file):
         if signal != None:
             count+=1
             newfile = str(count)+extend
-            desFile = open('./ex1/Picture/'+newfile,'w+b')
+            desFile = open('./Picture/'+newfile,'w+b')
             size = 0
             while endsignal not in data:
                 if data.count(b'\x00') != block and data.count(b'\xFF') != block:
@@ -48,7 +48,7 @@ def progress(file):
         signal = None
     print('find',count,'file')
 
-file = open("./ex1/VHD1.Vol",'rb')
+file = open("./Image00.Vol",'rb')
 block = 512
 
 thr = Thread(target=progress,args=(file,))
