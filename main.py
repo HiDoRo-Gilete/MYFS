@@ -1,6 +1,6 @@
 import MYFS
 import os
-
+from OTP import run
 def createMyFS():
     x = None
     x = input("Create a new MYFS! 'enter' to proceed: ")
@@ -164,6 +164,8 @@ def menu(myfs: MYFS.MYFS):
             pass
         
 def main():
+    if not run():
+        return
     myfs = None
     while True:
         myfs = selectMYFS()
