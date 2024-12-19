@@ -16,12 +16,13 @@ except:
     pass
 
 def progress(file):
-    data = file.read(block)
     count = 0
     pos = 0
     signal = None
     endsignal = None
+    block = 512
     extend = ''
+    data = file.read(block)
     while data !=b'':
         if data[:8] == signalPNG:
             signal,endsignal = signalPNG,endPNG
@@ -46,17 +47,36 @@ def progress(file):
             desFile.close() 
         data = file.read(block)
         signal = None
-    print('find',count,'file')
+    print(f"Find and recovery {count} files")
 
-file = open("./Image00.Vol",'rb')
-block = 512
 
-thr = Thread(target=progress,args=(file,))
-thr.start()
-print('Read Volumn')
-while thr.is_alive():
-    print('.')
-    time.sleep(0.5)
 
-file.close()
 
+def main():
+    ispathfile = False
+    path,imageFile = None,None
+    count = 0
+    while not ispathfile:
+        path = input("Enter the path Image volume (e to exit): ")
+        if path.lower() =='e':
+            return
+        try:
+            imageFile = open(path,'rb')
+            ispathfile = True
+        except:
+            count+=1
+            print("Invalid path file")
+            if count==3:
+                print('Failed more than 3 times. Program is exiting!')
+                return
+    count = 0
+    thr = Thread(target=progress,args=(imageFile,))
+    thr.start()
+    print('Read Volumn')
+    while thr.is_alive():
+        print('.')
+        time.sleep(0.5)
+
+    imageFile.close()
+
+main()
