@@ -58,6 +58,11 @@ class MYFS:
         #dataregion is too large, so can not create dataregion.
         label_sys = systemRegion
         label_myfs = bitmapRegion+sdetRegion+backupRegion
+        try:
+            os.mkdir('C:/Users/MYFS')
+        except:
+            print('error!')
+            pass
         self.sysFile=open('./MYFS/' + label +'_SYS.dat','w+b')
         self.sysFile.write(label_sys)
         self.myfsFile=open('./MYFS/' + label +'_MYFS.dat','w+b')
@@ -398,14 +403,14 @@ class MYFS:
         numcluster = os.path.getsize(path) //self.cluster_size +1
         datarun,newbitstring,arr_Datarun = Converter.createDatarun(bitstring,numcluster)
         entry+=datarun
-
         fs = open(path,'rb')
         for item in arr_Datarun:
             self.myfsFile.seek(self.getOffset(item[0]))
             for i in range(item[1]):
                 datasrc = fs.read(self.cluster_size)
                 self.myfsFile.write(datasrc)
-        newbyte = Converter.bitstring_to_bytes(newbitstring,self.bitmap_size)
+        #newbyte = Converter.bitstring_to_bytes(newbitstring,self.bitmap_size)
+        newbyte = int(newbitstring, 2).to_bytes((len(newbitstring) + 7) // 8, byteorder='big')
         self.myfsFile.seek(self.bitmap_index)
         self.myfsFile.write(newbyte)
         #print(entry)
@@ -427,7 +432,8 @@ class MYFS:
                 for i in range(item[1]):
                     datasrc = fs.read(self.cluster_size)
                     self.myfsFile.write(datasrc)
-            newbyte = Converter.bitstring_to_bytes(newbitstring,self.bitmap_size)
+            #newbyte = Converter.bitstring_to_bytes(newbitstring,self.bitmap_size)
+            newbyte = int(newbitstring, 2).to_bytes((len(newbitstring) + 7) // 8, byteorder='big')
             self.myfsFile.seek(self.bitmap_index)
             self.myfsFile.write(newbyte)
             #print(entry)
@@ -517,7 +523,7 @@ class MYFS:
                 if self.myfsFile.read(1) ==b'\x0E':
                     self.myfsFile.seek(index+9)
                     l = int.from_bytes(self.myfsFile.read(4),"big")
-                    if l >max:
+                    if l >maxsize:
                         maxsize,pos = l,index
                 index+=self.entry_size
                 self.myfsFile.seek(index)
@@ -530,8 +536,9 @@ class MYFS:
             self.myfsFile.seek(index)
             while index<self.backup_index:
                 if self.myfsFile.read(1) ==b'\x0E':
+                    self.myfsFile.seek(index)
                     en = self.myfsFile.read(self.entry_size)
-                    if en[89:89:en[87]] == fn:
+                    if en[89:89+en[87]] == fn:
                         posdelete.append(index)
                         break
                 index+=self.entry_size
@@ -541,11 +548,19 @@ class MYFS:
             for p in posdelete:
                 self.myfsFile.seek(p)
                 en = self.myfsFile.read(self.entry_size)
-                datarun = [89+en[87]+en[88]]
+                datarun = en[89+en[87]+en[88]:]
+                #print('da',datarun)
                 datarun = datarun[:datarun.index(b'\x00')]
-                arr = Converter.getDatarun(datarun)
+                arr = Converter.getDatarun(datarun) 
                 for ite in arr:
-                    bitstring=bitstring[0:index[0]-1]+'0'*index[1]+bitstring[index[0]-1+index[1]:]
+                    bitstring=bitstring[0:ite[0]-1]+'0'*ite[1]+bitstring[ite[0]-1+ite[1]:]
+                self.myfsFile.seek(p)
+                self.myfsFile.write(b'\x00'*self.entry_size)
+
+            newbyte = int(bitstring, 2).to_bytes((len(bitstring) + 7) // 8, byteorder='big')
+            self.myfsFile.seek(self.bitmap_index)
+            self.myfsFile.write(newbyte)
+            #raise Exception ('test')
             return pos
 
         index = self.sdet_index
@@ -578,6 +593,9 @@ class MYFS:
             return False
         path = entry[89+filenamelen:89+filenamelen+entry[88]].decode()
         filedes = None
+        size = int.from_bytes(entry[9:13], "big")
+        if size <100*1024*1024:
+            self.scanViruss(pos,entry)
         try:
             filedes = open(path,'w+b')
         except:
@@ -587,7 +605,7 @@ class MYFS:
         datarun = entry[89+filenamelen+entry[88]:]
         datarun=datarun[:datarun.index(b'\x00')]
         arr = Converter.getDatarun(datarun)
-        size = int.from_bytes(entry[9:13], "big")
+        
         aes = None
         if entry[13] ==1:
             pw = input("Enter the password: ")
@@ -664,28 +682,37 @@ class MYFS:
         if oldkey!=b'':
             aes2 = AES.new(oldkey,mode=AES.MODE_CTR,nonce=entry[14:22])
         size = int.from_bytes(entry[9:13], "big")
-        #hashcontent =
+        #hashcontent 
         for p in pos:
             self.myfsFile.seek(p)
             entry = self.myfsFile.read(self.entry_size)
             filenamelen = entry[87]
             datarun = entry[89+filenamelen+entry[88]:]
             datarun=datarun[:datarun.index(b'\x00')]
+            #print(datarun)
             arr = Converter.getDatarun(datarun)
+            alldata = b'' if size<100*1024*1024 else b'\x00'*32
             for item in arr:
                 self.myfsFile.seek(self.getOffset(item[0]))
                 for i in range(item[1]):
                     dataread = self.myfsFile.read(self.cluster_size)
                     #print(self.getOffset(item[0]),'\n',dataread)
+                    if i ==item[1] - 1 and arr.index(item) == len(arr) -1:
+                        dataread = dataread[:size%self.cluster_size]
                     if oldkey !=b'':
                         dataread=aes2.decrypt(dataread)
                     dataread = n_aes.encrypt(dataread)
+                    if size<100*1024*1024:
+                        alldata+=dataread
                     self.myfsFile.seek(self.getOffset(item[0]+i))
                     self.myfsFile.write(dataread)
-            entry = entry[:13]+b'\x01'+n_aes.nonce+sha256(newkey)+entry[54:]
+            if size<100*1024*1024:
+                alldata=sha256(alldata)
+            entry = entry[:13]+b'\x01'+n_aes.nonce+sha256(newkey)+alldata+entry[86:]
             self.myfsFile.seek(p)
             self.myfsFile.write(entry)
         print("Succesfully encrypted!")
+        self.allFiles = self.List()
         return True
                            
     def deleteFile(self,filename):
@@ -738,7 +765,7 @@ class MYFS:
                 temp =filename.split('.')
                 filename = '.'.join(temp[0:len(temp)-1])
                 filename +='_'+str(id)+'.'+temp[len(temp)-1]
-                print(path,oldfilename,filename)
+                #(path,oldfilename,filename)
                 path = path.replace(oldfilename,filename)
                 
             if id !=0: 
@@ -747,11 +774,63 @@ class MYFS:
                 namelen = entry[87] + count+1
                 pathlen = entry[88]+count+1
                 entry = entry[:87]+namelen.to_bytes(1,'big')+pathlen.to_bytes(1,'big')+filename.encode()+path.encode()+datarun
-                print(len(entry))
+                #print(len(entry))
             
             self.myfsFile.seek(p)  
             self.myfsFile.write(entry)
             
         self.allFiles = self.List()
         print('Found and recovered',count,'files!')
-    
+
+    def scanViruss(self,posE,entry):
+        size = int.from_bytes(entry[9:13], "big")
+        datarun = entry[89+entry[87]+entry[88]:]
+        datarun=datarun[:datarun.index(b'\x00')]
+        arr = Converter.getDatarun(datarun)
+        content = b''
+        for item in arr:
+            self.myfsFile.seek(self.getOffset(item[0]))
+            for i in range(item[1]):
+                data = self.myfsFile.read(self.cluster_size)
+                if i ==item[1] - 1 and arr.index(item) == len(arr) -1:
+                     data = data[:size%self.cluster_size]
+                content+=data
+        if sha256(content) == entry[54:86]:
+            return
+        else:
+            filename = entry[89:89+entry[87]]
+            index,pos = self.sdet_index,-1
+            self.myfsFile.seek(index)
+            bkentry = None
+            while index<self.backup_index:
+                bkentry=self.myfsFile.read(self.entry_size)
+                filenamelen = bkentry[87]
+                if bkentry[0] == 1 and filename == bkentry[89:89+filenamelen] and bkentry[86] == 1:
+                    pos = index
+                    break
+                index+=self.entry_size
+            self.myfsFile.seek(index)
+            if pos != - 1:
+                bsize = int.from_bytes(bkentry[9:13], "big")
+                bdatarun = bkentry[89+bkentry[87]+bkentry[88]:]
+                bdatarun=bdatarun[:bdatarun.index(b'\x00')]
+                barr = Converter.getDatarun(bdatarun)
+                bcontent = b''
+                for item in barr:
+                    self.myfsFile.seek(self.getOffset(item[0]))
+                    for i in range(item[1]):
+                        data = self.myfsFile.read(self.cluster_size)
+                        if i ==item[1] - 1 and barr.index(item) == len(barr) -1:
+                            data = data[:bsize%self.cluster_size]
+                        bcontent+=data
+                if sha256(bcontent) == bkentry[54:86]:
+                    count = 0
+                    for item in arr:
+                        self.myfsFile.seek(self.getOffset(item[0]))
+                        for i in range(item[1]):
+                            self.myfsFile.write(bcontent[count:count+self.cluster_size])
+                            count+=self.cluster_size        
+                    print("File is corrupted! Recovery success!")
+                    return
+            print("File is corrupted by the viruss!")
+            raise Exception("File is corrupted by the viruss!")

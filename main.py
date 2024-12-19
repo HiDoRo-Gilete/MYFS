@@ -164,8 +164,8 @@ def menu(myfs: MYFS.MYFS):
             pass
         
 def main():
-    if not run():
-        return
+    #if not run():
+       # return
     myfs = None
     while True:
         myfs = selectMYFS()

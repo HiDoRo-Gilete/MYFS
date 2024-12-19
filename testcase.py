@@ -31,8 +31,8 @@ def testUnprotectedMYFS():
     data = filesys.read(1024)
     print(data)
 def testImport():
-    filesys = open('./MYFS/G_SYS.dat','r+b')
-    filemyfs = open('./MYFS/G_MYFS.dat','r+b')
+    filesys = open('./MYFS/N_SYS.dat','r+b')
+    filemyfs = open('./MYFS/N_MYFS.dat','r+b')
     myfs = MYFS.MYFS(filemyfs,filesys)
     try:
         # filemyfs.seek(myfs.bitmap_index)
@@ -44,8 +44,8 @@ def testImport():
         print(e)
     filemyfs.seek(myfs.sdet_index)
 def testExport():
-    filesys = open('./MYFS/V_SYS.dat','r+b')
-    filemyfs = open('./MYFS/V_MYFS.dat','r+b')
+    filesys = open('./MYFS/T_SYS.dat','r+b')
+    filemyfs = open('./MYFS/T_MYFS.dat','r+b')
     myfs = MYFS.MYFS(filemyfs,filesys)
     try:
         myfs.ExportFile('21120253.docx')
@@ -68,18 +68,18 @@ def testRecovery():
     except Exception as e:
         print(e)
 def testPWFile():
-    filesys = open('./MYFS/G_SYS.dat','r+b')
-    filemyfs = open('./MYFS/G_MYFS.dat','r+b')
+    filesys = open('./MYFS/N_SYS.dat','r+b')
+    filemyfs = open('./MYFS/N_MYFS.dat','r+b')
     myfs = MYFS.MYFS(filemyfs,filesys)
     try:
-        myfs.setFilePassword('Converter.py')
+        myfs.setFilePassword('slide.pptx')
     except Exception as e:
         print(e)
 def test():
     #testUnprotectedMYFS()
     #testImport()
     #testDelete()
-    testRecovery()
-    #testPWFile()
+    #testRecovery()
+    testPWFile()
     #testExport()
 test()
