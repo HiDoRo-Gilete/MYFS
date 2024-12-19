@@ -711,7 +711,7 @@ class MYFS:
         print("Successfully deleted")
         return True
     
-    def RecoveryMode(self):
+    def RecoveryMode(self): 
         pos,entry,count= [],None,0
         index = self.sdet_index
         self.myfsFile.seek(index)
