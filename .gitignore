@@ -9,5 +9,8 @@ MYFS/*
 ex1/Picture/*
 !ex1/Picture/.gitkeep 
 
+#
+bash.exe.stackdump
+
 # caches
 __pycache__

@@ -1,9 +1,12 @@
 import MYFS
 import os
-from OTP import run
+import config
+from OTP import otp
+
 def createMyFS():
+    print("-------------Create Volume-------------")
     x = None
-    x = input("Create a new MYFS! 'enter' to proceed: ")
+    x = input("Create a new MYFS! 'Enter' to proceed: ")
     if (x != ''):
         return None
     
@@ -13,11 +16,58 @@ def createMyFS():
         
     password = ""
     while (password != None and len(password) < 6):
-        password = input("Enter volume's protection password (length >=6) or 'enter' to skip: ")
+        password = input("Enter volume's protection password (length >=6) or 'Enter' to skip: ")
         if (password == ""):
             password = None
     myfs = MYFS.MYFS()
     myfs.createMYFS(label, password)
+    return myfs
+
+def readMyFSFromPath(myfsPath, sysPath):
+    myfs = None
+    try:
+        myfsFile = open(myfsPath,'r+b')
+        sysFile = open(sysPath, 'r+b')
+        myfs = MYFS.MYFS(myfsFile, sysFile)
+        if not myfs.read_result == True:
+            myfs = None
+    except Exception as e:
+        print(e)
+        print('Failed to read volume')
+        pass
+    return myfs
+
+def readMyFS():
+    print("-------------Read Volume-------------")
+    myfsPath = ""
+    while myfsPath == "":
+        myfsPath = input("Enter the MYFS file's path or b/B to back: ") 
+        if (myfsPath.lower() == "b"):
+            myfsPath = ""
+            break
+        if ("_MYFS.dat" not in myfsPath):
+            print("Not a MYFS file")
+            myfsPath = ""
+        elif not os.path.isfile(myfsPath):
+            print("File does not exist :(\n")
+            myfsPath = ""
+    
+    sysPath = ""
+    while myfsPath != "" and sysPath == "":
+        sysPath = input("Enter the SYS file's path or b/B to back: ") 
+        if (sysPath.lower() == "b"):
+            sysPath = ""
+            break
+        if ("_SYS.dat" not in sysPath):
+            print("Not a SYS file")
+            sysPath = ""
+        elif not os.path.isfile(sysPath):
+            print("File does not exist :(\n")
+            sysPath = ""
+
+    myfs = None
+    if (myfsPath != "" and sysPath != ""):
+        myfs = readMyFSFromPath(myfsPath, sysPath)
     return myfs
 
 def selectMYFS():
@@ -31,49 +81,41 @@ def selectMYFS():
                 if labels.count(label) == 0:
                     if (label + '_SYS.dat') in allfile:
                         labels.append(label)
-                    
-
-        print("-----------MAIN-----------")
-        print('List of volumes:')
-        for i, label in enumerate(labels):
-            print(str(i) + ".", label)
-        print(str(len(labels)) + ".", "Create new volume")
-        print("e.", "Exit")  
-        
+                            
         label = None
-        while (label == None):
-            option = input(">> ")
-            if (option.lower() == 'e'):
+        print("-----------MAIN-----------")
+        print('Detected volumes:')
+        for i, lb in enumerate(labels):
+            print(str(i) + ".", lb)
+        print(str(len(labels)) + ".", "Create new volume")
+        print(str(len(labels) + 1) + ".", "Read volume")
+        print("e.", "Exit")  
+        option = input(">> ")
+        
+        if (option.lower() == 'e'):
+            return None
+        try:
+            option = int(option)
+            if (option == len(labels)):
+                myfs = createMyFS()
+            elif (option == len(labels) + 1):
+                myfs = readMyFS()
+            elif (option == len(labels) + 2):
                 myfs = None
-                return None
-            try:
-                option = int(option)
-                if (option == len(labels)):
-                    myfs = createMyFS()
-                    break
-                elif (option == len(labels) + 1):
-                    myfs = None
-                    break
-                elif (option >=0 and option < len(labels)):
-                    label = labels[option]
-                else:
-                    print('No such volume!')
-            except:
-                if option.upper() in labels:
-                    label = option.upper()
-                                   
-        if label != None:
-            try:
-                label = label.upper()
-                myfsFile = open('./MYFS/' + label + '_MYFS.dat', 'r+b')
-                sysFile = open('./MYFS/' + label + '_SYS.dat', 'r+b')
-                myfs = MYFS.MYFS(myfsFile, sysFile)
-                if not myfs.read_result == True:
-                    myfs = None
-            except Exception as e:
-                print(e)
-                print('Failed to read volume')
-                myfs = None
+            elif (option >=0 and option < len(labels)):
+                label = labels[option]
+            else:
+                print('No such volume!')
+        except:
+            if option.upper() in labels:
+                label = option.upper()
+                    
+                
+        if myfs == None and label != None:
+            label = label.upper()
+            myfsPath = './MYFS/' + label + '_MYFS.dat'
+            sysPath = './MYFS/' + label + '_SYS.dat'
+            myfs = readMyFSFromPath(myfsPath, sysPath)
                 
     return myfs
         
@@ -164,8 +206,8 @@ def menu(myfs: MYFS.MYFS):
             pass
         
 def main():
-    #if not run():
-       # return
+    if config.OTP_ACTIVE and not otp():
+       return
     myfs = None
     while True:
         myfs = selectMYFS()

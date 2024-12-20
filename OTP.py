@@ -35,11 +35,11 @@ def verify(user_input,x_value):
         user_input = user_input[:index0] +user_input[index0+1:]
         user_input = user_input[:index1] +user_input[index1+1:]
     return user_input==Y
-def run():
+def otp():
     x_value = getX()
     print(f"The X just sent to you is {x_value}")
 
-    generated_otp = make_smartOTP(x_value)
+    #generated_otp = make_smartOTP(x_value)
     #print(f"The Y calculated from X on your device is {generated_otp}")
     print("Note: " + ("The OTP will be expired in 20 seconds" if random.randint(0,1) == 0 else "You can try up to 3 times"))
     sys.stdout.flush()

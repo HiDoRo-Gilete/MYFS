@@ -11,7 +11,11 @@ def generateID(size=8, chars=string.ascii_uppercase + string.digits) -> str:
     return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
 def getMAC() -> str:
-    return get_mac_address().replace(':', '')
+    try:
+        return get_mac_address(interface="Ethernet").replace(':', '')
+    except:
+        pass
+    return "000000000000"
 
 def sha256(input: bytes) -> bytes:
     hash = SHA256.new()

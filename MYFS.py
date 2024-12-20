@@ -58,11 +58,11 @@ class MYFS:
         #dataregion is too large, so can not create dataregion.
         label_sys = systemRegion
         label_myfs = bitmapRegion+sdetRegion+backupRegion
-        try:
-            os.mkdir('C:/Users/MYFS')
-        except:
-            print('error!')
-            pass
+        # try:
+        #     os.mkdir('C:/Users/MYFS')
+        # except:
+        #     print('error!')
+        #     pass
         self.sysFile=open('./MYFS/' + label +'_SYS.dat','w+b')
         self.sysFile.write(label_sys)
         self.myfsFile=open('./MYFS/' + label +'_MYFS.dat','w+b')
@@ -132,7 +132,6 @@ class MYFS:
             print(sysEndingMarker, "Invalid sys file")
             return False
         self.sys_password = sysPwdHash if isSysEncrypted == True else None 
-
         try:
             # print(endingMarker)
             if (endingMarker != "MYFS"):
@@ -146,7 +145,6 @@ class MYFS:
         if (sysDataHash != sha256(metadata)):
             print("SYS data is corrupted")
             return False
-        
         # Decrypt system's data
         while (isSysEncrypted):
             try:
@@ -160,7 +158,6 @@ class MYFS:
                     print("Wrong password!")
             except Exception as e: print(e)
             
-        
         volumeLabel = (metadata[:1]).decode("ascii")
         # print("\nVolume: "+ volumeLabel +" - MYFS\n")
         volumeID = (metadata[1:9]).decode("ascii")
@@ -172,7 +169,6 @@ class MYFS:
         if (machineID != getMAC()):
             print("Can not read volume from this machine")
             return False
-        
         while (accessControlEnable):
             accessPwd = input('Volume is protected! Enter password or e/E to exit: ')
             if (accessPwd.lower() == 'e'):
@@ -198,7 +194,6 @@ class MYFS:
         
         self.sys_size= 1024
         self.sys_index = 0
-        
         self.cluster_size = clusterSize
         self.entry_size= entrySize
         self.bitmap_size = bitMapSize
@@ -228,9 +223,9 @@ class MYFS:
             print()
 
     def getInfo(self) -> bool:
-        return self.getSYSData(self.sysFile) and self.getFSData(self.myfsFile)
+        return self.getSYSData(self.sysFile) and self.getMYFSData(self.myfsFile)
         
-    def getFSData(self, file: BufferedRandom) -> bool:
+    def getMYFSData(self, file: BufferedRandom) -> bool:
         return True
     
     def updateFSPassword(self):
@@ -476,7 +471,6 @@ class MYFS:
             if entry[0] == 1 and entry[86] == 0:
                 # from_bytes requires byteorder "big" or "little"
                 filesize = int.from_bytes(entry[9:13], "big")
-                
                 filenamelen = entry[87]
                 pathlen = entry[88]
                 bytedate_create = Converter.decimalToBit(entry[1],1)+Converter.decimalToBit(entry[2],1)
@@ -487,7 +481,6 @@ class MYFS:
                 h1 = Converter.bitstring_to_bytes(bytetime_create[0:5],1)[0]
                 mi1= Converter.bitstring_to_bytes(bytetime_create[5:11],1)[0]
                 s1 = Converter.bitstring_to_bytes(bytetime_create[11:16],1)[0]
-                
                 bytedate_modifier = Converter.decimalToBit(entry[5],1)+Converter.decimalToBit(entry[6],1)
                 y2 = Converter.bitstring_to_bytes(bytedate_modifier[0:7],1)[0]
                 m2= Converter.bitstring_to_bytes(bytedate_modifier[7:11],1)[0]
@@ -496,7 +489,6 @@ class MYFS:
                 h2 = Converter.bitstring_to_bytes(bytetime_modifier[0:5],1)[0]
                 mi2= Converter.bitstring_to_bytes(bytetime_modifier[5:11],1)[0]
                 s2 = Converter.bitstring_to_bytes(bytetime_modifier[11:16],1)[0]
-                
                 isencrypt = 'yes' if entry[13] == 1 else 'no'
                 filename = entry[89:89+filenamelen].decode()
                 path=entry[89+filenamelen:89+filenamelen+pathlen].decode()

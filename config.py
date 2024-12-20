@@ -1,3 +1,5 @@
+OTP_ACTIVE = True # True 
+
 MAX_FILE_SIZE = int(4*1024*1024*1024) #4gb
 MAX_FILE = 99  
 
