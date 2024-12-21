@@ -73,13 +73,17 @@ def readMyFS():
 def selectMYFS():
     myfs = None
     while myfs == None:
-        allfile = os.listdir('./MYFS')
+        sysFiles = os.listdir('./SYS')
+        myfsFiles = os.listdir('./MYFS')
+        allFiles = []
+        for e in sysFiles: allFiles.append(e)
+        for e in myfsFiles: allFiles.append(e)
         labels = []
-        for file in allfile:
+        for file in allFiles:
             if '_MYFS.dat' in file:
                 label = file[0:1].upper()
                 if labels.count(label) == 0:
-                    if (label + '_SYS.dat') in allfile:
+                    if (label + '_SYS.dat') in allFiles:
                         labels.append(label)
                             
         label = None
@@ -114,7 +118,7 @@ def selectMYFS():
         if myfs == None and label != None:
             label = label.upper()
             myfsPath = './MYFS/' + label + '_MYFS.dat'
-            sysPath = './MYFS/' + label + '_SYS.dat'
+            sysPath = './SYS/' + label + '_SYS.dat'
             myfs = readMyFSFromPath(myfsPath, sysPath)
                 
     return myfs

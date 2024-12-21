@@ -6,6 +6,7 @@ from getmac import get_mac_address
 from Cryptodome.Hash import SHA256
 from Cryptodome.Cipher import AES 
 from Cryptodome.Protocol.KDF import HKDF
+import os
 
 def generateID(size=8, chars=string.ascii_uppercase + string.digits) -> str:
     return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
@@ -64,6 +65,9 @@ def getFilename(path: str):
         parts = path.split('\\')
     return parts[-1]
 
+def mkdir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 # ==============Print files===============
 
 cols = ["Filename", "Size", "Creation date", "Modification date", "Import path", "Encryption"]

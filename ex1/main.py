@@ -49,9 +49,6 @@ def progress(file):
         signal = None
     print(f"Find and recovery {count} files")
 
-
-
-
 def main():
     ispathfile = False
     path,imageFile = None,None

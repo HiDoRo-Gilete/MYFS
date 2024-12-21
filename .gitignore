@@ -4,7 +4,8 @@ test*
 # 
 MYFS/*
 !MYFS/.gitkeep 
-
+SYS/*
+!SYS/.gitkeep 
 #
 ex1/Picture/*
 !ex1/Picture/.gitkeep 

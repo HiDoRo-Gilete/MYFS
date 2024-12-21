@@ -58,12 +58,8 @@ class MYFS:
         #dataregion is too large, so can not create dataregion.
         label_sys = systemRegion
         label_myfs = bitmapRegion+sdetRegion+backupRegion
-        # try:
-        #     os.mkdir('C:/Users/MYFS')
-        # except:
-        #     print('error!')
-        #     pass
-        self.sysFile=open('./MYFS/' + label +'_SYS.dat','w+b')
+
+        self.sysFile=open('./SYS/' + label +'_SYS.dat','w+b')
         self.sysFile.write(label_sys)
         self.myfsFile=open('./MYFS/' + label +'_MYFS.dat','w+b')
         self.myfsFile.write(1024*b'\x00')
@@ -312,7 +308,7 @@ class MYFS:
             overwrite(self.sysFile, 84+0, manager)
             overwrite(self.sysFile, 0, sysEncryptedData)
             self.sysFile.flush()
-            print("Successfully updated!")   
+            print("Successfully encrypted!")   
             input() 
         except Exception as e: print(e)
         pass
